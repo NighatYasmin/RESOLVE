@@ -44,6 +44,7 @@
  * Ben Markle
  * Kim Roche
  * Murali Sitaraman
+ * Nighat Yasmin
  */
 /*
  * MathExpTypeResolver.java
@@ -379,6 +380,9 @@ public class MathExpTypeResolver extends TypeResolutionVisitor {
             N = t;
         else if (var.equals("Z"))
             Z = t;
+        // --ny
+        else if (var.equals("R"))
+            R = t;
         else if (var.equals("Char"))
             Char = t;
         else if (var.equals("Str"))
@@ -402,6 +406,9 @@ public class MathExpTypeResolver extends TypeResolutionVisitor {
             return N;
         if (var.equals("Z") && Z != null)
             return Z;
+        // --ny
+        if (var.equals("R") && R != null)
+            return R;
         if (var.equals("Char") && Char != null)
             return Char;
         if (var.equals("Str") && Str != null)
@@ -648,6 +655,11 @@ public class MathExpTypeResolver extends TypeResolutionVisitor {
                             //     on types
                             return handleIsInitialCall(exp);
                         }
+                        // --ny
+                        else if (checkI_DURCall(exp2)) {
+                            // "Entry.I_DUR", etc.
+                            return handleIDURCall(exp);
+                        }
                     }
                     catch (Exception ex) {
                         if (ex instanceof TypeResolutionException) {
@@ -696,6 +708,16 @@ public class MathExpTypeResolver extends TypeResolutionVisitor {
         return false;
     }
 
+    // --ny
+    public boolean checkI_DURCall(Exp exp) {
+        if (exp instanceof FunctionExp) {
+            if (((FunctionExp) exp).getName().getName().equals("I_DUR")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // handle a call of the form: "Entry.Is_Initial(E)"
     private Type handleIsInitialCall(DotExp exp) throws Exception {
         Exp exp1 = exp.getSegments().get(0);
@@ -719,6 +741,40 @@ public class MathExpTypeResolver extends TypeResolutionVisitor {
         if (params2.size() != 1) {
             String msg =
                     "Cannot pass more than one argument in a call to Is_Initial().";
+            err.error(exp2.getLocation(), msg);
+            throw new TypeResolutionException();
+        }
+        Exp onlyParam = params2.get(0);
+        Type t2 = getMathExpType(onlyParam);
+        matchTypes(exp2.getLocation(), tentry.getType(), t2, false, false);
+        Type bool = getType("Boolean_Theory", "B", exp, false);
+        ((FunctionExp) exp2).setType(bool);
+        exp.setType(bool);
+        return bool;
+    }
+
+    // --ny
+    // handle a call of the form: "Entry.I_DUR"
+    private Type handleIDURCall(DotExp exp) throws Exception {
+        Exp exp1 = exp.getSegments().get(0);
+        Exp exp2 = exp.getSegments().get(1);
+        TypeID tid = new TypeID(null, ((VarExp) exp1).getName(), 0);
+        TypeLocator tlocator =
+                new TypeLocator(table, false, myInstanceEnvironment);
+        TypeEntry tentry = tlocator.locateProgramType(tid);
+        //                           < ------------------------------ (1) put a flag here to tell if its local?
+        ((VarExp) exp1).setType(tentry.getType());
+        FunctionExp fe = (FunctionExp) exp2;
+        List<FunctionArgList> params = fe.getParamList();
+        // check the number of parameters
+        if (params.size() != 0) {
+            String msg = "Cannot pass any argument in a call to I_DUR().";
+            err.error(exp2.getLocation(), msg);
+            throw new TypeResolutionException();
+        }
+        List<Exp> params2 = params.get(0).getArguments();
+        if (params2.size() != 0) {
+            String msg = "Cannot pass any argument in a call to I_DUR().";
             err.error(exp2.getLocation(), msg);
             throw new TypeResolutionException();
         }
@@ -765,9 +821,16 @@ public class MathExpTypeResolver extends TypeResolutionVisitor {
                 exp.setType(Z);
                 return Z;
             }
+            // --ny
+            Type R = getType("Real_Theory", "R", exp, true);
+            if (R != null) {
+                exp.setType(R);
+                return R;
+            }
             String msg =
-                    cantFindType("Integer_Theory.Z or Natural_Number_Theory.N");
+                    cantFindType("Integer_Theory.Z or Real_Theory.R or Natural_Number_Theory.N");
             err.error(exp.getLocation(), msg);
+
             throw new TypeResolutionException();
         }
     }

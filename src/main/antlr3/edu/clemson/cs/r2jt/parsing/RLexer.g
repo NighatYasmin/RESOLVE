@@ -397,6 +397,10 @@ MODUS
   : 'modus'
   ;
   
+MODULE_PROFILE
+  : 'Profile'
+  ;
+  
 NOT
   : 'not'
   ;
@@ -444,9 +448,9 @@ PRESERVES
 PROCEDURE
   : 'Procedure' | 'Proc'
   ;
-  
-MODULE_PROFILE
-  : 'Profile' | 'profile'
+
+PROFILE
+  : 'profile'
   ;
   
 PROOF
