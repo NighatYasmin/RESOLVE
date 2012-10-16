@@ -1511,14 +1511,6 @@ public class Populator extends TreeWalkerVisitor {
         myBuilder.endScope();
     }
 
-    // hampton
-    public void postDotExp(DotExp e) {
-        List<Exp> eSegments = e.getSegments();
-        Exp lastSegment = eSegments.get(eSegments.size() - 1);
-        e.setMathType(lastSegment.getMathType());
-        e.setMathTypeValue(lastSegment.getMathTypeValue());
-    }
-
     @Override
     public void postModuleArgumentItem(ModuleArgumentItem i) {
 

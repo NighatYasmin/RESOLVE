@@ -7441,6 +7441,14 @@ public class Verifier extends ResolveConceptualVisitor {
 
         visitProcedures(dec.getDecs());
         table.endModuleScope();
+        /* NY */
+        if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
+            ModuleID pid = ModuleID.createPerformanceID(dec.getProfileName());
+            PerformanceEModuleDec pDec =
+                    (PerformanceEModuleDec) myInstanceEnvironment
+                            .getModuleDec(pid);
+            visitPerformanceEModuleDec(pDec);
+        }
     }
 
     public void visitExp(Exp exp) {
