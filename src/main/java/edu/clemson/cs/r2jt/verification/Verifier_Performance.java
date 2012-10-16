@@ -85,7 +85,6 @@ public class Verifier_Performance {
     AssertiveCode assertion1;
     FacilityOperationDec dec1;
     OldSymbolTable table1;
-
     ProcedureDec dec2;
     EqualsExp recurs;
 
