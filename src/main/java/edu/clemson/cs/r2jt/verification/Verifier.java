@@ -44,6 +44,7 @@
  * Ben Markle
  * Kim Roche
  * Murali Sitaraman
+ * Nighat Yasmin
  */
 /*
  * Verifier.java
@@ -113,6 +114,8 @@ public class Verifier extends ResolveConceptualVisitor {
     private boolean initializationRule = false;
 
     private boolean isInInterface = false;
+    // NY This expression holds the duration
+    private Exp _Cum_Dur = null;
 
     // This buffer holds the verbose data
     private StringBuffer VCBuffer;
@@ -139,6 +142,9 @@ public class Verifier extends ResolveConceptualVisitor {
 
     private static final String FLAG_DESC_VERIFY_VC = "Generate VCs.";
 
+    // --ny
+    private static final String FLAG_DESC_PERF_VC = "Generate performance VCs.";
+
     private static final String FLAG_DESC_FINALVERB_VC =
             "Show Final VCs in Old 'Verbose' Format.";
 
@@ -149,6 +155,13 @@ public class Verifier extends ResolveConceptualVisitor {
      */
     public static final Flag FLAG_VERBOSE_VC =
             new Flag(FLAG_SECTION_NAME, "verbose", FLAG_DESC_VERBOSE_VC);
+
+    /**
+     * --ny <p></p>
+     */
+    public static final Flag FLAG_PERF_VC =
+    //		new Flag(FLAG_SECTION_NAME, "perf", FLAG_DESC_PERF_VC);
+            new Flag(FLAG_SECTION_NAME, "PVCs", FLAG_DESC_PERF_VC);
 
     /**
      * <p></p>
@@ -220,6 +233,10 @@ public class Verifier extends ResolveConceptualVisitor {
         FlagDependencies.addRequires(FLAG_ISABELLE_VC, FLAG_VERIFY_VC);
         FlagDependencies.addRequires(FLAG_SIMPLIFY_VC, FLAG_VERIFY_VC);
         FlagDependencies.addRequires(FLAG_LISTVCS_VC, FLAG_VERIFY_VC);
+        // --ny
+        //FlagDependencies.addRequires(FLAG_PERF_VC, FLAG_VERIFY_VC);				
+        FlagDependencies.addImplies(Verifier.FLAG_PERF_VC,
+                Verifier.FLAG_VERIFY_VC);
 
     }
 
@@ -620,6 +637,9 @@ public class Verifier extends ResolveConceptualVisitor {
             if (ensures.getLocation() != null)
                 ensures.getLocation().setDetails(
                         "Ensures Clause For " + opDec.getName());
+            // --ny
+            System.out.println("Verifier.java: Ensures Clause For "
+                    + opDec.getName());
 
         }
         else {
@@ -2403,6 +2423,40 @@ public class Verifier extends ResolveConceptualVisitor {
         }
         return curOperation;
 
+    }
+
+    //NY
+    public PerformanceOperationDec formPerfOpDec(PerformanceOperationDec dec) {
+
+        PerformanceOperationDec curOperation = new PerformanceOperationDec();
+
+        if (dec.getName() != null) {
+            curOperation.setName(dec.getName());
+        }
+        if (!(dec.getParameters().isEmpty())) {
+            curOperation.setParameters(dec.getParameters());
+        }
+        if (dec.getReturnTy() != null) {
+            curOperation.setParameters(dec.getParameters());
+
+        }
+        if (dec.getStateVars() != null) {
+            curOperation.setParameters(dec.getParameters());
+
+        }
+        if (dec.getRequires() != null) {
+            curOperation.setRequires((Exp) (dec.getRequires().clone()));
+
+        }
+        if (dec.getEnsures() != null) {
+            curOperation.setEnsures((Exp) (dec.getEnsures().clone()));
+
+        }
+        if (dec.getDuration() != null) {
+            curOperation.setDuration((Exp) (dec.getDuration().clone()));
+
+        }
+        return curOperation;
     }
 
     private void generateVCsForOperationParameter(FacilityDec dec,
@@ -5195,6 +5249,24 @@ public class Verifier extends ResolveConceptualVisitor {
         return typeParms;
     }
 
+    // --ny
+    private List<String> getPerfTypeParms(ModuleID cid) {
+        List<String> typeParms = new List<String>();
+        PerformanceEModuleDec pDec =
+                (PerformanceEModuleDec) myInstanceEnvironment.getModuleDec(cid);
+        List<ModuleParameter> mpList = pDec.getParameters();
+        Iterator<ModuleParameter> mpIt = mpList.iterator();
+        ModuleParameter mp = null;
+        while (mpIt.hasNext()) {
+            mp = mpIt.next();
+            if (mp instanceof ConceptTypeParamDec) {
+                typeParms.addUnique(((ConceptTypeParamDec) mp).getName()
+                        .toString());
+            }
+        }
+        return typeParms;
+    }
+
     // Get the PosSymbol associated with the VariableExp left 
     private PosSymbol getVarName(VariableExp left) {
         PosSymbol name;
@@ -7232,6 +7304,14 @@ public class Verifier extends ResolveConceptualVisitor {
         VCBuffer.append("Enhancement Name: ");
         VCBuffer.append(eDec.getName().toString());
         VCBuffer.append("\n");
+        /* NY */
+        if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
+            ModuleID pid = ModuleID.createPerformanceID(dec.getProfileName());
+            PerformanceEModuleDec pDec =
+                    (PerformanceEModuleDec) myInstanceEnvironment
+                            .getModuleDec(pid);
+            visitPerformance_Related_Names(pDec);
+        }
 
         List<UsesItem> list = eDec.getUsesItems();
         list.addAll(dec.getUsesItems());
@@ -7260,6 +7340,14 @@ public class Verifier extends ResolveConceptualVisitor {
         }
         visitProcedures(dec.getDecs());
         table.endModuleScope();
+        /* NY */
+        if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
+            ModuleID pid = ModuleID.createPerformanceID(dec.getProfileName());
+            PerformanceEModuleDec pDec =
+                    (PerformanceEModuleDec) myInstanceEnvironment
+                            .getModuleDec(pid);
+            visitPerformanceEModuleDec(pDec);
+        }
     }
 
     public void visitExp(Exp exp) {
@@ -7830,6 +7918,14 @@ public class Verifier extends ResolveConceptualVisitor {
             assertion.addAssume(recurs);
         }
 
+        /* **********************Murali: Cum_Dur test************************* */
+
+        if (dec.getDecreasing() != null) {
+            Verifier_Performance VerifierPerf =
+                    new Verifier_Performance(assertion, dec, table);
+            assertion = VerifierPerf.VerifierPerfProcedureDec();
+        }
+
         /* Add Statements to Assertive Code */
         assertion.addStatements(dec.getStatements());
 
@@ -8371,6 +8467,10 @@ public class Verifier extends ResolveConceptualVisitor {
             else if (dec instanceof FacilityDec) {
                 visitFacilityDec((FacilityDec) dec);
             }
+            // --NY
+            else if (dec instanceof PerformanceOperationDec) {
+                visitPerformanceOperationDec((PerformanceOperationDec) dec);
+            }
         }
     }
 
@@ -8730,5 +8830,136 @@ public class Verifier extends ResolveConceptualVisitor {
                 importList.addUnique(importStr);
             }
         }
+    }
+
+    // --NY added for Performance
+    public void visitPerformance_Related_Names(PerformanceEModuleDec dec1) {
+
+        VCBuffer.append("Profile Name: ");
+        VCBuffer.append(dec1.getName().toString());
+        VCBuffer.append("\n");
+
+        // YS - Check to see if we have the profile's concept name and its
+        //      associated profile.
+        if (dec1.getProfilecName() != null) {
+            VCBuffer.append("Profile's Concept Name: ");
+            VCBuffer.append(dec1.getProfilecName().toString());
+            VCBuffer.append("\n");
+
+            VCBuffer.append("Profile Concept's Profile Name: ");
+            VCBuffer.append(dec1.getProfilecpName().toString());
+            VCBuffer.append("\n");
+        }
+
+        VCBuffer.append("\n Performance Operation Name:\t");
+        System.out.println(dec1.getName().getSymbol().toString());
+        VCBuffer.append(dec1.getName().getSymbol().toString());
+        VCBuffer.append("\n");
+
+    }
+
+    // --NY added for Performance
+    public void visitPerformanceCModuleDec(PerformanceCModuleDec dec1) {
+        table.beginModuleScope();
+        System.out.println(dec1.getName().getName());
+        visitProcedures(dec1.getDecs());
+        table.endModuleScope();
+    }
+
+    public void visitPerformanceEModuleDec(PerformanceEModuleDec dec1) {
+        table.beginModuleScope();
+        importList = new List<String>();
+        parmOpList = new List<String>();
+
+        // YS - Check to see if we have concept performance profile or a enhancement performance profile
+        ModuleID cid;
+        if (dec1.getProfilecpName() == null) {
+            dec1.setProfilecName(dec1.getProfileName3());
+            cid =
+                    ModuleID.createProfileID(dec1.getProfileName1(), dec1
+                            .getProfileName2(), new PosSymbol(), dec1
+                            .getProfilecName(), new PosSymbol());
+
+            //        	cid = ModuleID.createProfileID(dec1.getProfileName1(), dec1.getProfileName2(), dec1.getProfileName3(),
+            //										new PosSymbol(), new PosSymbol());
+        }
+        else {
+            cid =
+                    ModuleID.createProfileID(dec1.getProfileName1(), dec1
+                            .getProfileName2(), dec1.getProfileName3(), dec1
+                            .getProfilecName(), dec1.getProfilecpName());
+        }
+
+        typeParms = getPerfTypeParms(cid);
+        //   concParms = getConcParms(cid);
+
+        //--NY
+        //        visitPerformanceInitItem(dec1.getPerfInit());
+        //        visitPerformanceFinalItem(dec1.getPerfFinal());
+
+        visitProcedures(dec1.getDecs());
+
+        table.endModuleScope();
+    }
+
+    // --NY added for Performance
+    public void visitPerformanceInitItem(PerformanceInitItem item) {
+        if (item != null) {
+            System.out.println("Perf_Initialization: "
+                    + item.getDuration().toString());
+        }
+        else {
+            System.out.println("Perf_Initialization: is null");
+        }
+    }
+
+    // --NY added for Performance
+    public void visitPerformanceFinalItem(PerformanceFinalItem item) {
+        if (item != null) {
+            System.out.println("Perf_Finalization: "
+                    + item.getDuration().toString());
+        }
+        else {
+            System.out.println("Perf_Finalization: is null");
+        }
+    }
+
+    // --NY added for Performance
+    public void visitPerformanceOperationDec(PerformanceOperationDec dec) {
+        AssertiveCode assertion = new AssertiveCode(myInstanceEnvironment);
+        //       table.beginPerformanceOperationScope();
+        //       table.beginPerformanceProcedureScope();
+        //       table.bindPerformanceProcedureTypeNames();
+
+        System.out.println("\n PerformanceOperation Name:\t");
+        System.out.println(dec.getName().getSymbol().toString());
+        System.out.println(dec.getDuration().toString());
+
+        //    	VCBuffer.append("\n_____________________ \n");
+        //    	VCBuffer.append("\nProcedure Declaration Rule Applied: \n\n");
+        //    	VCBuffer.append(assertion.assertionToString());
+
+        _Cum_Dur = dec.getDuration();
+        if (_Cum_Dur != null) {
+            //        	assertion.addAssume(_Cum_Dur);
+            assertion.addConfirm(_Cum_Dur);
+            VCBuffer.append(assertion.assertionToString());
+
+        }
+        // construct Exp for confirm statement for duration
+        // add that Exp to the assertions
+        // See 7520
+        // something like assertion.addConfirm(durationExp);
+
+        // if there is ensures clause, need to add it
+        //if(ensures != null){
+        //assertion.setFinalConfirm(ensures);
+        //}
+
+        /* Applies Proof Rules */
+        applyEBRules(assertion);
+        VCBuffer.append("\n_____________________ \n\n");
+        //        table.endPerformanceProcedureScope();
+        //        table.endPerformanceOperationScope();
     }
 }

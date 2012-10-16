@@ -44,6 +44,7 @@
  * Ben Markle
  * Kim Roche
  * Murali Sitaraman
+ * Nighat Yasmin
  */
 /*
  * Controller.java
@@ -421,6 +422,13 @@ public class Controller {
             List<Dec> decs = ((ConceptModuleDec) dec).getDecs();
             Iterator<ModuleParameterDec> params =
                     (((ConceptModuleDec) dec).getParameters()).iterator();
+            checkOpDecs(decs, dec, params);
+        }
+        // -- ny
+        else if (dec instanceof PerformanceEModuleDec) {
+            List<Dec> decs = ((PerformanceEModuleDec) dec).getDecs();
+            Iterator<ModuleParameter> params =
+                    (((PerformanceEModuleDec) dec).getParameters()).iterator();
             checkOpDecs(decs, dec, params);
         }
         else if (dec instanceof ConceptBodyModuleDec) {
@@ -1011,6 +1019,16 @@ public class Controller {
                 myInstanceEnvironment.completeRecord(id, table);
                 return;
             }
+
+            //			// --ny
+            //			if (myInstanceEnvironment.perf()) { // DEBUG
+            if (myInstanceEnvironment.PVCs()) { // DEBUG
+                OldSymbolTable table =
+                        new OldSymbolTable(id, myInstanceEnvironment);
+                myInstanceEnvironment.completeRecord(id, table);
+                return;
+            }
+
             MathSymbolTable mathSymTab = getMathSymbolTable(dec, symbolTable);
             OldSymbolTable table = analyzeModuleDec(symbolTable, dec);
 
@@ -1028,6 +1046,12 @@ public class Controller {
             if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_VERIFY_VC)) {
                 //verifyModuleDec(context, dec);
                 // I don't think this is necessary
+            }
+
+            // --ny
+            if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
+                verifyModuleDec(context, dec);
+                //		verifyPerfModuleDec(context, dec);
             }
         }
         catch (CompilerException cex) {
@@ -1703,6 +1727,47 @@ public class Controller {
         }
 
         return vcsToProve;
+    }
+
+    // --ny
+    private void verifyPerfModuleDec(MathExpTypeResolver context, ModuleDec dec) {
+        SymbolTable table = context.getSymbolTable();
+        Verifier verifier = new Verifier(table, myInstanceEnvironment);
+        //		verifier.visitPerformanceEModuleDec(dec);
+        verifier.visitModuleDec(dec);
+        verifier.outputAsrt();
+
+        if (myInstanceEnvironment.flags.isFlagSet(Prover.FLAG_LEGACY_PROVE)
+                || myInstanceEnvironment.flags.isFlagSet(Prover.FLAG_PROVE)) {
+
+            ModuleDec targetDec =
+                    myInstanceEnvironment
+                            .getModuleDec(myInstanceEnvironment
+                                    .getModuleID(myInstanceEnvironment
+                                            .getTargetFile()));
+
+            Iterable<VerificationCondition> vcsToProve = null;
+
+            if (targetDec == dec && dec instanceof MathModuleDec) {
+                vcsToProve = new TheoremToVCsConverter((MathModuleDec) dec);
+            }
+            else {
+                Collection<AssertiveCode> VCs = verifier.getFinalVCs();
+
+                if (VCs != null && VCs.size() > 0) {
+                    vcsToProve = new VCCollector(VCs);
+                }
+            }
+
+            if (vcsToProve != null) {
+                try {
+                    new Prover(context, vcsToProve, myInstanceEnvironment);
+                }
+                catch (ProverException e) {
+                    err.error(e.toString());
+                }
+            }
+        }
     }
 
     // ------------------------------------------------------------

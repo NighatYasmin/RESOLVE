@@ -44,6 +44,7 @@
  * Ben Markle
  * Kim Roche
  * Murali Sitaraman
+ * Nighat Yasmin
  */
 /*
  * SwapStmt.java
@@ -75,6 +76,9 @@ public class SwapStmt extends Statement {
     /** The right member. */
     private VariableExp right;
 
+    /** The time require to complete the swap statement. */
+    private VariableExp duration;
+
     // ===========================================================
     // Constructors
     // ===========================================================
@@ -85,6 +89,14 @@ public class SwapStmt extends Statement {
         this.location = location;
         this.left = left;
         this.right = right;
+    }
+
+    public SwapStmt(Location location, VariableExp left, VariableExp right,
+            VariableExp duration) {
+        this.location = location;
+        this.left = left;
+        this.right = right;
+        this.duration = duration;
     }
 
     // ===========================================================
@@ -110,6 +122,11 @@ public class SwapStmt extends Statement {
         return right;
     }
 
+    /** Returns the value of the duration variable. */
+    public VariableExp getDuration() {
+        return duration;
+    }
+
     // -----------------------------------------------------------
     // Set Methods
     // -----------------------------------------------------------
@@ -127,6 +144,11 @@ public class SwapStmt extends Statement {
     /** Sets the right variable to the specified value. */
     public void setRight(VariableExp right) {
         this.right = right;
+    }
+
+    /** Sets the right variable to the specified value. */
+    public void setDuration(VariableExp duration) {
+        this.duration = duration;
     }
 
     // ===========================================================
@@ -154,6 +176,10 @@ public class SwapStmt extends Statement {
             sb.append(right.asString(indent + increment, increment));
         }
 
+        if (duration != null) {
+            sb.append(duration.asString(indent + increment, increment));
+        }
+
         return sb.toString();
     }
 
@@ -170,6 +196,10 @@ public class SwapStmt extends Statement {
 
         if (right != null) {
             sb.append(right.toString(0));
+        }
+
+        if (duration != null) {
+            sb.append(" and " + duration.toString(0));
         }
 
         return sb.toString();
