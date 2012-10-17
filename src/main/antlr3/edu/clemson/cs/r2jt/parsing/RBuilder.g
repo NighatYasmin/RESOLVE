@@ -10,7 +10,7 @@ options {
     //importVocab=RESOLVE;
     }
 
-@header {
+@header { 
     package edu.clemson.cs.r2jt.parsing;
     
     import edu.clemson.cs.r2jt.absyn.*;

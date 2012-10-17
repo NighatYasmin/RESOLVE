@@ -1309,7 +1309,7 @@ public class Controller {
             ModuleKind kind = mid.getModuleKind();
             if (kind != ModuleKind.USES_ITEM) {
                 String key = "";
-                if (kind != ModuleKind.CONCEPT) {
+                if (kind != ModuleKind.CONCEPT && kind != ModuleKind.PROFILE) {
                     key += mid.getConceptName().getName() + ".";
                 }
                 else {
