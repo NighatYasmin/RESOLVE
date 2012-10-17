@@ -918,6 +918,52 @@ public abstract class TreeWalkerVisitor {
 
     public void postParameterVarDec(ParameterVarDec data) {}
 
+    // PerformanceCModuleDec
+    public void prePerformanceCModuleDec(PerformanceCModuleDec data) {}
+
+    public void midPerformanceCModuleDec(PerformanceCModuleDec node,
+            ResolveConceptualElement prevChild,
+            ResolveConceptualElement nextChild) {}
+
+    public void postPerformanceCModuleDec(PerformanceCModuleDec data) {}
+
+    public void prePerformanceCModuleDecParameters(PerformanceCModuleDec node) {}
+
+    public void postPerformanceCModuleDecParameters(PerformanceCModuleDec node) {}
+
+    public void prePerformanceCModuleDecUsesItems(PerformanceCModuleDec node) {}
+
+    public void postPerformanceCModuleDecUsesItems(PerformanceCModuleDec node) {}
+
+    public void prePerformanceCModuleDecConstraints(PerformanceCModuleDec node) {}
+
+    public void postPerformanceCModuleDecConstraints(PerformanceCModuleDec node) {}
+
+    public void prePerformanceCModuleDecDecs(PerformanceCModuleDec node) {}
+
+    public void postPerformanceCModuleDecDecs(PerformanceCModuleDec node) {}
+
+    // PerformanceEModuleDec
+    public void prePerformanceEModuleDec(PerformanceEModuleDec data) {}
+
+    public void midPerformanceEModuleDec(PerformanceEModuleDec node,
+            ResolveConceptualElement prevChild,
+            ResolveConceptualElement nextChild) {}
+
+    public void postPerformanceEModuleDec(PerformanceEModuleDec data) {}
+
+    public void prePerformanceEModuleDecParameters(PerformanceEModuleDec node) {}
+
+    public void postPerformanceEModuleDecParameters(PerformanceEModuleDec node) {}
+
+    public void prePerformanceEModuleDecUsesItems(PerformanceEModuleDec node) {}
+
+    public void postPerformanceEModuleDecUsesItems(PerformanceEModuleDec node) {}
+
+    public void prePerformanceEModuleDecDecs(PerformanceEModuleDec node) {}
+
+    public void postPerformanceEModuleDecDecs(PerformanceEModuleDec node) {}
+
     // PerformanceFinalItem
     public void prePerformanceFinalItem(PerformanceFinalItem data) {}
 
@@ -975,31 +1021,6 @@ public abstract class TreeWalkerVisitor {
     public void prePerformanceInitItemStatements(PerformanceInitItem node) {}
 
     public void postPerformanceInitItemStatements(PerformanceInitItem node) {}
-
-    // PerformanceModuleDec
-    public void prePerformanceModuleDec(PerformanceModuleDec data) {}
-
-    public void midPerformanceModuleDec(PerformanceModuleDec node,
-            ResolveConceptualElement prevChild,
-            ResolveConceptualElement nextChild) {}
-
-    public void postPerformanceModuleDec(PerformanceModuleDec data) {}
-
-    public void prePerformanceModuleDecParameters(PerformanceModuleDec node) {}
-
-    public void postPerformanceModuleDecParameters(PerformanceModuleDec node) {}
-
-    public void prePerformanceModuleDecUsesItems(PerformanceModuleDec node) {}
-
-    public void postPerformanceModuleDecUsesItems(PerformanceModuleDec node) {}
-
-    public void prePerformanceModuleDecConstraints(PerformanceModuleDec node) {}
-
-    public void postPerformanceModuleDecConstraints(PerformanceModuleDec node) {}
-
-    public void prePerformanceModuleDecDecs(PerformanceModuleDec node) {}
-
-    public void postPerformanceModuleDecDecs(PerformanceModuleDec node) {}
 
     // PerformanceOperationDec
     public void prePerformanceOperationDec(PerformanceOperationDec data) {}

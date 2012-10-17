@@ -47,7 +47,7 @@
  * Nighat Yasmin
  */
 /*
- * PerformanceModuleDec.java
+ * PerformanceCModuleDec.java
  * 
  * The Resolve Software Composition Workbench Project
  * 
@@ -64,26 +64,23 @@ import edu.clemson.cs.r2jt.collections.List;
 import edu.clemson.cs.r2jt.data.PosSymbol;
 import edu.clemson.cs.r2jt.data.Symbol;
 
-public class PerformanceModuleDec extends ModuleDec {
+public class PerformanceCModuleDec extends ModuleDec {
 
     // ===========================================================
     // Variables
     // ===========================================================
 
     /** The ProfileNames member. */
-    private PosSymbol profileNames1;
+    private PosSymbol name;
+
+    /** The ProfileNames member. */
+    private PosSymbol profileName1;
+
+    /** The Profile's concept name member. */
+    private PosSymbol profilecName;
 
     /** The parameters member. */
     private List<ModuleParameter> parameters;
-
-    //   /** The conceptName member. */
-    //   private PosSymbol conceptName;
-
-    /** The ProfileNames member. */
-    private PosSymbol profileNames2;
-
-    /** The name member. */
-    private PosSymbol name;
 
     /** The usesItems member. */
     private List<UsesItem> usesItems;
@@ -93,12 +90,6 @@ public class PerformanceModuleDec extends ModuleDec {
 
     /** The constraints member. */
     private List<Exp> constraints;
-
-    /** The conventions member. */
-    //    private List<Exp> conventions;
-
-    /** The corrs member. */
-    //    private List<Exp> corrs;
 
     /** The performance initialization member. */
     private PerformanceInitItem perfInit;
@@ -119,30 +110,20 @@ public class PerformanceModuleDec extends ModuleDec {
     // Constructors
     // ===========================================================
 
-    public PerformanceModuleDec() {};
+    public PerformanceCModuleDec() {};
 
-    public PerformanceModuleDec(
-            PosSymbol profileNames1,
-            List<ModuleParameter> parameters,
-            //            PosSymbol conceptName,
-            PosSymbol profileNames2, PosSymbol name, List<UsesItem> usesItems,
-            Exp requires,
-            List<Exp> constraints,
-            //     List<Exp> conventions,
-            //     List<Exp> corrs,
+    public PerformanceCModuleDec(PosSymbol name, PosSymbol profileName1,
+            PosSymbol profilecName, List<ModuleParameter> parameters,
+            List<UsesItem> usesItems, Exp requires, List<Exp> constraints,
             PerformanceInitItem perfInit, PerformanceFinalItem perfFinal,
             InitItem facilityInit, FinalItem facilityFinal, List<Dec> decs) {
-        //this.name = name;
-        this.name = profileNames1;
+        this.name = name;
+        this.profileName1 = profileName1;
+        this.profilecName = profilecName;
         this.parameters = parameters;
-        //        this.conceptName = conceptName;
-        this.profileNames1 = profileNames1;
-        this.profileNames2 = profileNames2;
         this.usesItems = usesItems;
         this.requires = requires;
         this.constraints = constraints;
-        //        this.conventions = conventions;
-        //        this.corrs = corrs;
         this.perfInit = perfInit;
         this.perfFinal = perfFinal;
         this.facilityInit = facilityInit;
@@ -158,27 +139,24 @@ public class PerformanceModuleDec extends ModuleDec {
     // Get Methods
     // -----------------------------------------------------------
 
-    /** Returns the value of the name variable. */
+    /** Returns the value of the profileNames variable. */
     public PosSymbol getName() {
         return name;
+    }
+
+    /** Returns the value of the profileNames variable. */
+    public PosSymbol getProfileName1() {
+        return profileName1;
+    }
+
+    /** Returns the value of the Profile's concept name variable. */
+    public PosSymbol getProfilecName() {
+        return profilecName;
     }
 
     /** Returns the value of the parameters variable. */
     public List<ModuleParameter> getParameters() {
         return parameters;
-    }
-
-    /** Returns the value of the conceptName variable. */
-    //    public PosSymbol getConceptName() { return conceptName; }
-
-    /** Returns the value of the profileNames variable. */
-    public PosSymbol getProfileNames1() {
-        return profileNames1;
-    }
-
-    /** Returns the value of the profileNames variable. */
-    public PosSymbol getProfileNames2() {
-        return profileNames2;
     }
 
     /** Returns the value of the usesItems variable. */
@@ -195,12 +173,6 @@ public class PerformanceModuleDec extends ModuleDec {
     public List<Exp> getConstraints() {
         return constraints;
     }
-
-    /** Returns the value of the conventions variable. */
-    //    public List<Exp> getConventions() { return conventions; }
-
-    /** Returns the value of the corrs variable. */
-    //    public List<Exp> getCorrs() { return corrs; }
 
     /** Returns the value of the performance initialization variable. */
     public PerformanceInitItem getPerfInit() {
@@ -244,27 +216,24 @@ public class PerformanceModuleDec extends ModuleDec {
     // Set Methods
     // -----------------------------------------------------------
 
-    /** Sets the name variable to the specified value. */
+    /** Sets the profileName1 variable to the specified value. */
     public void setName(PosSymbol name) {
         this.name = name;
+    }
+
+    /** Sets the profileName1 variable to the specified value. */
+    public void setProfileNames1(PosSymbol profileName1) {
+        this.profileName1 = profileName1;
+    }
+
+    /** Sets the Profile's concept name variable to the specified value. */
+    public void setProfilecName(PosSymbol profilecName) {
+        this.profilecName = profilecName;
     }
 
     /** Sets the parameters variable to the specified value. */
     public void setParameters(List<ModuleParameter> parameters) {
         this.parameters = parameters;
-    }
-
-    /** Sets the conceptName variable to the specified value. */
-    //    public void setConceptName(PosSymbol conceptName) { this.conceptName = conceptName; }
-
-    /** Sets the profileNames1 variable to the specified value. */
-    public void setProfileNames1(PosSymbol profileNames1) {
-        this.profileNames1 = profileNames1;
-    }
-
-    /** Sets the profileNames2 variable to the specified value. */
-    public void setProfileNames2(PosSymbol profileNames2) {
-        this.profileNames2 = profileNames2;
     }
 
     /** Sets the usesItems variable to the specified value. */
@@ -281,12 +250,6 @@ public class PerformanceModuleDec extends ModuleDec {
     public void setConstraints(List<Exp> constraints) {
         this.constraints = constraints;
     }
-
-    /** Sets the conventions variable to the specified value. */
-    //    public void setConventions(List<Exp> conventions) { this.conventions = conventions; }
-
-    /** Sets the corrs variable to the specified value. */
-    //    public void setCorrs(List<Exp> corrs) { this.corrs = corrs; }
 
     /** Sets the performance initialization variable to the specified value. */
     public void setPerfInit(PerformanceInitItem perfInit) {
@@ -319,7 +282,7 @@ public class PerformanceModuleDec extends ModuleDec {
 
     /** Accepts a ResolveConceptualVisitor. */
     public void accept(ResolveConceptualVisitor v) {
-        v.visitPerformanceModuleDec(this);
+        v.visitPerformanceCModuleDec(this);
     }
 
     /** Returns a formatted text string of this class. */
@@ -328,26 +291,22 @@ public class PerformanceModuleDec extends ModuleDec {
         StringBuffer sb = new StringBuffer();
 
         printSpace(indent, sb);
-        sb.append("PerformanceModuleDec\n");
+        sb.append("PerformanceCModuleDec\n");
 
         if (name != null) {
             sb.append(name.asString(indent + increment, increment));
         }
 
+        if (profileName1 != null) {
+            sb.append(profileName1.asString(indent + increment, increment));
+        }
+
+        if (profilecName != null) {
+            sb.append(profilecName.asString(indent + increment, increment));
+        }
+
         if (parameters != null) {
             sb.append(parameters.asString(indent + increment, increment));
-        }
-
-        //        if (conceptName != null) {
-        //            sb.append(conceptName.asString(indent + increment, increment));
-        //        }
-
-        if (profileNames1 != null) {
-            sb.append(profileNames1.asString(indent + increment, increment));
-        }
-
-        if (profileNames2 != null) {
-            sb.append(profileNames2.asString(indent + increment, increment));
         }
 
         if (usesItems != null) {
@@ -361,14 +320,6 @@ public class PerformanceModuleDec extends ModuleDec {
         if (constraints != null) {
             sb.append(constraints.asString(indent + increment, increment));
         }
-
-        //        if (conventions != null) {
-        //            sb.append(conventions.asString(indent + increment, increment));
-        //        }
-
-        //        if (corrs != null) {
-        //            sb.append(corrs.asString(indent + increment, increment));
-        //        }
 
         if (perfInit != null) {
             sb.append(perfInit.asString(indent + increment, increment));

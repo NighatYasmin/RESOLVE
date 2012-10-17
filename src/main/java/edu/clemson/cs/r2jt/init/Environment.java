@@ -502,8 +502,10 @@ public class Environment {
      * Returns true if if performance is checked.
      */
     @Deprecated
-    public boolean perf() {
-        return myOldEnvironment.perf();
+    public boolean PVCs() {
+        //  public boolean perf() {
+        //       	return myOldEnvironment.perf();
+        return myOldEnvironment.PVCs();
         //return perf;
     }
 
