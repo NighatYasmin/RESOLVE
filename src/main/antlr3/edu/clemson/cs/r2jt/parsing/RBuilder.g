@@ -372,8 +372,8 @@ realization_body_module returns [ModuleDec dec = null]
     edu.clemson.cs.r2jt.collections.List<UsesItem> uses = new edu.clemson.cs.r2jt.collections.List<UsesItem>("UsesItem");
 }
     :   ^(  MODULE_REALIZATION ps=ident
-            (WITH_PROFILE pName=ident)?
             (pars2=module_formal_param_section)?
+            (WITH_PROFILE pName=ident)?
             (   dec2=body_concept_section
             |   dec3=body_enhancement_section
             )

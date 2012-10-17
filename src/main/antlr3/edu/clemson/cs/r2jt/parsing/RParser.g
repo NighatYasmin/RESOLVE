@@ -349,8 +349,8 @@ enhancement_item
 
 realization_body_module
     :   MODULE_REALIZATION^ id1=ident { bodyModule = true; }
-        (WITH_PROFILE ident)?
-        (module_formal_param_section)? FOR!
+        (module_formal_param_section)?
+        (WITH_PROFILE ident)? FOR!
         (   (ident OF)=> body_enhancement_section
         |   body_concept_section
         ) SEMICOLON!
