@@ -429,7 +429,8 @@ public class Controller {
             List<Dec> decs = ((PerformanceEModuleDec) dec).getDecs();
             Iterator<ModuleParameter> params =
                     (((PerformanceEModuleDec) dec).getParameters()).iterator();
-            checkOpDecs(decs, dec, params);
+            //TODO : fixup performance module parameter stuff
+            //checkOpDecs(decs, dec, params);
         }
         else if (dec instanceof ConceptBodyModuleDec) {
             List<Dec> decs = ((ConceptBodyModuleDec) dec).getDecs();
@@ -1050,7 +1051,7 @@ public class Controller {
 
             // --ny
             if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
-                verifyModuleDec(context, dec);
+                verifyModuleDec(mathSymTab, table, dec);
                 //		verifyPerfModuleDec(context, dec);
             }
         }
@@ -1730,9 +1731,12 @@ public class Controller {
     }
 
     // --ny
-    private void verifyPerfModuleDec(MathExpTypeResolver context, ModuleDec dec) {
-        SymbolTable table = context.getSymbolTable();
-        Verifier verifier = new Verifier(table, myInstanceEnvironment);
+    /*
+    private void verifyPerfModuleDec(MathSymbolTable newSymbolTable,
+            OldSymbolTable oldSymbolTable, ModuleDec dec) {
+        Verifier verifier =
+                new Verifier(newSymbolTable, oldSymbolTable,
+                        myInstanceEnvironment);
         //		verifier.visitPerformanceEModuleDec(dec);
         verifier.visitModuleDec(dec);
         verifier.outputAsrt();
@@ -1768,7 +1772,7 @@ public class Controller {
                 }
             }
         }
-    }
+    }*/
 
     // ------------------------------------------------------------
     // Translation Related Methods

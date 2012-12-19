@@ -84,7 +84,7 @@ public class Verifier_Performance {
 
     AssertiveCode assertion1;
     FacilityOperationDec dec1;
-    SymbolTable table1;
+    OldSymbolTable table1;
 
     ProcedureDec dec2;
     EqualsExp recurs;
@@ -93,7 +93,7 @@ public class Verifier_Performance {
      * Construct a Verifier_Performance.
      */
     public Verifier_Performance(AssertiveCode assertion,
-            FacilityOperationDec dec, SymbolTable table) {
+            FacilityOperationDec dec, OldSymbolTable table) {
         this.assertion1 = assertion;
         this.dec1 = dec;
         this.table1 = table;
