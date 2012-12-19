@@ -829,8 +829,9 @@ public class Populator extends TreeWalkerVisitor {
             duplicateSymbol(varName, programVar.getLocation());
         }
 
-        Populator.emitDebug("  New program variable: " + varName + " of type "
-                + mathTypeValue.toString() + " with quantification NONE");
+        Populator.emitDebug("  New program variable: " + varName
+                + " of type " + mathTypeValue.toString()
+                + " with quantification NONE");
     }
 
     @Override
@@ -1025,8 +1026,8 @@ public class Populator extends TreeWalkerVisitor {
         addBinding(definitionSymbol, node.getName().getLocation(), node,
                 declaredType, typeValue, myDefinitionSchematicTypes);
 
-        Populator.emitDebug("New definition: " + definitionSymbol + " of type "
-                + declaredType
+        Populator.emitDebug("New definition: " + definitionSymbol
+                + " of type " + declaredType
                 + ((typeValue != null) ? " with type value " + typeValue : ""));
 
         myCurrentDirectDefinition = null;
@@ -2090,9 +2091,9 @@ public class Populator extends TreeWalkerVisitor {
 
         setSymbolTypeValue(node, symbolName, intendedEntry);
 
-        Populator.emitDebug("Processed symbol " + symbolName + " with type "
-                + node.getMathType() + ", referencing math type "
-                + node.getMathTypeValue());
+        Populator.emitDebug("Processed symbol " + symbolName
+                + " with type " + node.getMathType()
+                + ", referencing math type " + node.getMathTypeValue());
 
         return intendedEntry;
     }

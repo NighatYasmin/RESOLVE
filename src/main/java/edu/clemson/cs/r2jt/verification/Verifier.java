@@ -114,8 +114,16 @@ public class Verifier extends ResolveConceptualVisitor {
     private boolean initializationRule = false;
 
     private boolean isInInterface = false;
+
     // NY This expression holds the duration
     private Exp _Cum_Dur = null;
+    private PosSymbol Profile_Name = null;
+    private PosSymbol Profile_CName = null;
+    private PosSymbol Profile_CPName = null;
+    private ModuleID Profile_EID = null;
+    private ModuleID Profile_CP_ID = null;
+    private PerformanceEModuleDec pEDec = null;
+    private PerformanceCModuleDec pCPDec = null;
 
     // This buffer holds the verbose data
     private StringBuffer VCBuffer;
@@ -618,6 +626,26 @@ public class Verifier extends ResolveConceptualVisitor {
         /* Get Ensures Clause - Set to "true" if nonexistent*/
         if (opDec != null) {
             Exp ens = (Exp) (((OperationDec) opDec).getEnsures());
+
+            // --ny
+            if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)
+                    && (pEDec != null || pCPDec != null)) {
+
+                Iterator<Dec> i = (pCPDec.getDecs()).iterator();
+                while (i.hasNext()) {
+                    Dec dec = i.next();
+                    if (dec instanceof PerformanceOperationDec) {
+                        if (opDec.getName().toString() == dec.getName()
+                                .toString()) {
+                            visitPerformanceOperationDec((PerformanceOperationDec) dec);
+                            //  	_Cum_Dur = dec.getDuration();
+                            System.out.println("Cum_Dur:  "
+                                    + _Cum_Dur.toString());
+                        }
+                    }
+                }
+            }
+
             if (ens != null)
                 ensures = (Exp) Exp.clone(ens);
             else
@@ -638,12 +666,25 @@ public class Verifier extends ResolveConceptualVisitor {
                 ensures.getLocation().setDetails(
                         "Ensures Clause For " + opDec.getName());
             // --ny
-            System.out.println("Verifier.java: Ensures Clause For "
-                    + opDec.getName());
+            if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)
+                    && pCPDec != null) {
+
+                Iterator<Dec> i = (pCPDec.getDecs()).iterator();
+                while (i.hasNext()) {
+                    Dec dec = i.next();
+                    if (dec instanceof PerformanceOperationDec) {
+                        visitPerformanceOperationDec((PerformanceOperationDec) dec);
+                        //  	_Cum_Dur = dec.getDuration();
+                        System.out.println("Cum_Dur:  " + _Cum_Dur);
+
+                    }
+                }
+            }
 
         }
         else {
             ensures = getTrueVarExp();
+
             VCBuffer.append("\n_____________________ \n");
             VCBuffer.append("\nSpec not found \n");
             VCBuffer.append(assertion.assertionToString());
@@ -722,6 +763,7 @@ public class Verifier extends ResolveConceptualVisitor {
         ensures =
                 replacePostConditionVariables(stmt.getArguments(), ensures,
                         opDec, assertion);
+
         Exp conf = assertion.getFinalConfirm();
 
         /*PosSymbol opName = new PosSymbol();
@@ -753,19 +795,43 @@ public class Verifier extends ResolveConceptualVisitor {
             assertion.addConfirm(requires);
         }
         if (ensures != null) {
+            String operName; // --ny
             if (stmt.getName().getLocation() != null) {
                 Location loc = (Location) stmt.getName().getLocation().clone();
+
+                operName = opDec.getName().toString(); // --ny
+                // --ny 
+                if (myInstanceEnvironment.flags
+                        .isFlagSet(Verifier.FLAG_PERF_VC)
+                        && (pEDec != null || pCPDec != null)) {
+
+                    Iterator<Dec> i = (pCPDec.getDecs()).iterator();
+                    PerformanceOperationDec pDec = null;
+
+                    while (i.hasNext()) {
+                        Dec dec = i.next();
+                        if (dec instanceof PerformanceOperationDec) {
+                            if (dec.getName().getSymbol().toString() == operName) {
+                                pDec = (PerformanceOperationDec) dec;
+                                visitPerformanceOperationDec((PerformanceOperationDec) dec);
+                                _Cum_Dur = pDec.getDuration();
+                            }
+                            System.out.println("Cum_Dur:  " + _Cum_Dur);
+                        }
+                    }
+                }
+
                 loc.setDetails("Ensures Clause of " + opDec.getName());
                 setLocation(ensures, loc);
             }
-            assertion.addAssume(ensures);
+
+            //            assertion.addAssume(ensures);
         }
 
         assertion.setFinalConfirm(conf);
         VCBuffer.append("\n_____________________ \n");
         VCBuffer.append("\nOperation Call Rule Applied: \n");
         VCBuffer.append(assertion.assertionToString());
-
     }
 
     private void applyEBConfirmStmtRule(ConfirmStmt stmt,
@@ -2160,6 +2226,29 @@ public class Verifier extends ResolveConceptualVisitor {
 
         if (opDec != null) {
             if (opDec.getEnsures() != null) {
+                String operName; // --ny
+                operName = opDec.getName().toString(); // --ny
+                // --ny 
+                if (myInstanceEnvironment.flags
+                        .isFlagSet(Verifier.FLAG_PERF_VC)
+                        && pCPDec != null) {
+
+                    Iterator<Dec> i = (pCPDec.getDecs()).iterator();
+                    PerformanceOperationDec pDec = null;
+
+                    while (i.hasNext()) {
+                        Dec dec = i.next();
+                        if (dec instanceof PerformanceOperationDec) {
+                            if (dec.getName().getSymbol().toString() == operName) {
+                                pDec = (PerformanceOperationDec) dec;
+                                visitPerformanceOperationDec((PerformanceOperationDec) dec);
+                                _Cum_Dur = pDec.getDuration();
+                            }
+                            System.out.println("Cum_Dur:  2171" + _Cum_Dur);
+                        }
+                    }
+                }
+
                 ensures = (Exp) Exp.clone(((OperationDec) opDec).getEnsures());
             }
         }
@@ -2553,7 +2642,6 @@ public class Verifier extends ResolveConceptualVisitor {
                     if (ens1 == null) {
                         ens1 = getTrueVarExp();
                     }
-
                     ens1 =
                             modifyEnsuresForParameterModes(ens1,
                                     (OperationDec) dec2);
@@ -7301,20 +7389,32 @@ public class Verifier extends ResolveConceptualVisitor {
         EnhancementModuleDec eDec =
                 (EnhancementModuleDec) myInstanceEnvironment.getModuleDec(eid);
 
+        List<UsesItem> list = eDec.getUsesItems();
+        list.addAll(dec.getUsesItems());
+
         VCBuffer.append("Enhancement Name: ");
         VCBuffer.append(eDec.getName().toString());
         VCBuffer.append("\n");
         /* NY */
         if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
-            ModuleID pid = ModuleID.createPerformanceID(dec.getProfileName());
-            PerformanceEModuleDec pDec =
+            //    ModuleID pid = ModuleID.createPerformanceID(dec.getProfileName());
+            Profile_EID = ModuleID.createPerformanceID(dec.getProfileName());
+
+            PerformanceEModuleDec pEDec =
                     (PerformanceEModuleDec) myInstanceEnvironment
-                            .getModuleDec(pid);
-            visitPerformance_Related_Names(pDec);
+                            .getModuleDec(Profile_EID);
+
+            visitPerformance_Related_Names(pEDec, list);
+
+            visitPerformanceEModuleDec(pEDec);
+
+            list.addAll(pEDec.getUsesItems());
+            if (Profile_CName != null && pCPDec != null) {
+                visitPerformanceCModuleDec(pCPDec);
+                list.addAll(pCPDec.getUsesItems());
+            }
         }
 
-        List<UsesItem> list = eDec.getUsesItems();
-        list.addAll(dec.getUsesItems());
         ConceptModuleDec cDec =
                 (ConceptModuleDec) myInstanceEnvironment.getModuleDec(cid);
 
@@ -7338,16 +7438,9 @@ public class Verifier extends ResolveConceptualVisitor {
             }
             assrtBuf.append("\tbegin\n\n");
         }
+
         visitProcedures(dec.getDecs());
         table.endModuleScope();
-        /* NY */
-        if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
-            ModuleID pid = ModuleID.createPerformanceID(dec.getProfileName());
-            PerformanceEModuleDec pDec =
-                    (PerformanceEModuleDec) myInstanceEnvironment
-                            .getModuleDec(pid);
-            visitPerformanceEModuleDec(pDec);
-        }
     }
 
     public void visitExp(Exp exp) {
@@ -7956,7 +8049,7 @@ public class Verifier extends ResolveConceptualVisitor {
             loc = (Location) (curOperation.getEnsures().getLocation().clone());
         }
         if (loc != null) {
-            loc.setDetails("Ensures Clause of " + dec.getName());
+            loc.setDetails("Ensures Clause of ny Nighat" + dec.getName());
             setLocation(ensures, loc);
         }
 
@@ -8376,8 +8469,16 @@ public class Verifier extends ResolveConceptualVisitor {
 
         }
         if (loc != null) {
-            loc.setDetails("Ensures Clause of " + dec.getName());
+            loc.setDetails("Ensures Clause of ny yasmin" + dec.getName());
             setLocation(ensures, loc);
+
+            // --ny
+            if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
+                PerformanceEModuleDec pDec =
+                        (PerformanceEModuleDec) myInstanceEnvironment
+                                .getModuleDec(Profile_EID);
+                visitProcedures(pDec.getDecs());
+            }
         }
 
         if (correspondence != null && (!(correspondence instanceof EqualsExp)))
@@ -8833,43 +8934,52 @@ public class Verifier extends ResolveConceptualVisitor {
     }
 
     // --NY added for Performance
-    public void visitPerformance_Related_Names(PerformanceEModuleDec dec1) {
+    public void visitPerformance_Related_Names(PerformanceEModuleDec dec1,
+            List<UsesItem> list) {
 
-        VCBuffer.append("Profile Name: ");
-        VCBuffer.append(dec1.getName().toString());
+        Profile_Name = dec1.getName();
+        VCBuffer.append("Profile Name:\t");
+        VCBuffer.append(Profile_Name.toString());
         VCBuffer.append("\n");
 
         // YS - Check to see if we have the profile's concept name and its
         //      associated profile.
         if (dec1.getProfilecName() != null) {
-            VCBuffer.append("Profile's Concept Name: ");
-            VCBuffer.append(dec1.getProfilecName().toString());
+            Profile_CName = dec1.getProfilecName();
+            VCBuffer.append("Profile's Concept Name:\t");
+            VCBuffer.append(Profile_CName.toString());
             VCBuffer.append("\n");
 
-            VCBuffer.append("Profile Concept's Profile Name: ");
-            VCBuffer.append(dec1.getProfilecpName().toString());
+            Profile_CPName = dec1.getProfilecpName();
+            VCBuffer.append("Profile Concept's Profile Name:\t");
+            VCBuffer.append(Profile_CPName.toString());
+            VCBuffer.append("\n");
+
+            if (Profile_CPName != null) {
+                Profile_CP_ID = ModuleID.createPerformanceID(Profile_CPName);
+                PerformanceCModuleDec pCPDec =
+                        (PerformanceCModuleDec) myInstanceEnvironment
+                                .getModuleDec(Profile_CP_ID);
+                list.addAll(pCPDec.getUsesItems());
+            }
+            VCBuffer.append("Performance Operation Name: Need to be fixed\t");
+            VCBuffer.append(dec1.getName().toString());
             VCBuffer.append("\n");
         }
-
-        VCBuffer.append("\n Performance Operation Name:\t");
-        System.out.println(dec1.getName().getSymbol().toString());
-        VCBuffer.append(dec1.getName().getSymbol().toString());
-        VCBuffer.append("\n");
-
     }
 
-    // --NY added for Performance
+    // --NY   added for Performance
     public void visitPerformanceCModuleDec(PerformanceCModuleDec dec1) {
         table.beginModuleScope();
+        System.out.println("visitPerformanceCModuleDec");
         System.out.println(dec1.getName().getName());
         visitProcedures(dec1.getDecs());
         table.endModuleScope();
     }
 
+    // --NY   added for Performance
     public void visitPerformanceEModuleDec(PerformanceEModuleDec dec1) {
         table.beginModuleScope();
-        importList = new List<String>();
-        parmOpList = new List<String>();
 
         // YS - Check to see if we have concept performance profile or a enhancement performance profile
         ModuleID cid;
@@ -8879,9 +8989,6 @@ public class Verifier extends ResolveConceptualVisitor {
                     ModuleID.createProfileID(dec1.getProfileName1(), dec1
                             .getProfileName2(), new PosSymbol(), dec1
                             .getProfilecName(), new PosSymbol());
-
-            //        	cid = ModuleID.createProfileID(dec1.getProfileName1(), dec1.getProfileName2(), dec1.getProfileName3(),
-            //										new PosSymbol(), new PosSymbol());
         }
         else {
             cid =
@@ -8894,7 +9001,7 @@ public class Verifier extends ResolveConceptualVisitor {
         //   concParms = getConcParms(cid);
 
         //--NY
-        //        visitPerformanceInitItem(dec1.getPerfInit());
+        //       visitPerformanceInitItem(dec1.getPerfInit());
         //        visitPerformanceFinalItem(dec1.getPerfFinal());
 
         visitProcedures(dec1.getDecs());
@@ -8940,10 +9047,12 @@ public class Verifier extends ResolveConceptualVisitor {
         //    	VCBuffer.append(assertion.assertionToString());
 
         _Cum_Dur = dec.getDuration();
+
         if (_Cum_Dur != null) {
-            //        	assertion.addAssume(_Cum_Dur);
-            assertion.addConfirm(_Cum_Dur);
-            VCBuffer.append(assertion.assertionToString());
+            //            assertion.addAssume(_Cum_Dur);
+            //           assertion.addConfirm(_Cum_Dur);
+            //          VCBuffer.append(assertion.assertionToString());
+            //        VCBuffer.append(_Cum_Dur.toString());
 
         }
         // construct Exp for confirm statement for duration
@@ -8957,8 +9066,8 @@ public class Verifier extends ResolveConceptualVisitor {
         //}
 
         /* Applies Proof Rules */
-        applyEBRules(assertion);
-        VCBuffer.append("\n_____________________ \n\n");
+        //    applyEBRules(assertion);
+        //     VCBuffer.append("\n_____________________ \n\n");
         //        table.endPerformanceProcedureScope();
         //        table.endPerformanceOperationScope();
     }
