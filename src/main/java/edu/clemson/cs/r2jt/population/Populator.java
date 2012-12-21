@@ -219,6 +219,22 @@ public class Populator extends TreeWalkerVisitor {
     }
 
     @Override
+    public void prePerformanceCModuleDec(PerformanceCModuleDec performanceModule) {
+        myCurModuleScope.addImport(new ModuleIdentifier(performanceModule
+                .getProfilecName().getName()));
+    }
+
+    @Override
+    public void prePerformanceEModuleDec(PerformanceEModuleDec performanceModule) {
+        myCurModuleScope.addImport(new ModuleIdentifier(performanceModule
+                .getProfilecName().getName()));
+        myCurModuleScope.addImport(new ModuleIdentifier(performanceModule
+                .getProfilecpName().getName()));
+        myCurModuleScope.addImport(new ModuleIdentifier(performanceModule
+                .getProfileName3().getName()));
+    }
+
+    @Override
     public void postUsesItem(UsesItem uses) {
         myCurModuleScope.addImport(new ModuleIdentifier(uses));
     }

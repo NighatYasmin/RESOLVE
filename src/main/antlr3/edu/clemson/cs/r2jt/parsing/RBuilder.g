@@ -248,7 +248,7 @@ performance_enhancement_module returns [PerformanceEModuleDec dec = null]
 @init{
     edu.clemson.cs.r2jt.collections.List<Exp> cons = new edu.clemson.cs.r2jt.collections.List<Exp>("Exp");
     edu.clemson.cs.r2jt.collections.List<Dec> decs = new edu.clemson.cs.r2jt.collections.List<Dec>("Dec");
-    edu.clemson.cs.r2jt.collections.List<ModuleParameter> pars = new edu.clemson.cs.r2jt.collections.List<ModuleParameter>("ModuleParameter");
+    edu.clemson.cs.r2jt.collections.List<ModuleParameterDec> pars = new edu.clemson.cs.r2jt.collections.List<ModuleParameterDec>("ModuleParameterDec");
     edu.clemson.cs.r2jt.collections.List<UsesItem> uses = new edu.clemson.cs.r2jt.collections.List<UsesItem>("UsesItem");
 }
     :   ^(  ENHANCEMENT_PROFILE pn1=ident
@@ -284,7 +284,7 @@ performance_E_item_sequence returns [PerformanceEModuleDec  dec = null]
     PosSymbol pcn = null; //dummy
     PosSymbol pcp = null; //dummy
 
-    edu.clemson.cs.r2jt.collections.List<ModuleParameter> pars = null; //dummy
+    edu.clemson.cs.r2jt.collections.List<ModuleParameterDec> pars = null; //dummy
     edu.clemson.cs.r2jt.collections.List<UsesItem> uses = null; //dummy
     Exp req = null; //dummy
     edu.clemson.cs.r2jt.collections.List<Exp> cons = new edu.clemson.cs.r2jt.collections.List<Exp>("Exp");

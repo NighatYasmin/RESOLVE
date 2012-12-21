@@ -89,7 +89,7 @@ public class PerformanceEModuleDec extends ModuleDec {
     private PosSymbol profilecpName;
 
     /** The parameters member. */
-    private List<ModuleParameter> parameters;
+    private List<ModuleParameterDec> parameters;
 
     /** The usesItems member. */
     private List<UsesItem> usesItems;
@@ -109,7 +109,7 @@ public class PerformanceEModuleDec extends ModuleDec {
     public PerformanceEModuleDec(PosSymbol profileName1,
             PosSymbol profileName2, PosSymbol profileName3,
             PosSymbol profilecName, PosSymbol profilecpName,
-            List<ModuleParameter> parameters, List<UsesItem> usesItems,
+            List<ModuleParameterDec> parameters, List<UsesItem> usesItems,
             Exp requires, List<Dec> decs) {
         this.profileName1 = profileName1;
         this.profileName2 = profileName2;
@@ -161,7 +161,7 @@ public class PerformanceEModuleDec extends ModuleDec {
     }
 
     /** Returns the value of the parameters variable. */
-    public List<ModuleParameter> getParameters() {
+    public List<ModuleParameterDec> getParameters() {
         return parameters;
     }
 
@@ -228,7 +228,7 @@ public class PerformanceEModuleDec extends ModuleDec {
     }
 
     /** Sets the parameters variable to the specified value. */
-    public void setParameters(List<ModuleParameter> parameters) {
+    public void setParameters(List<ModuleParameterDec> parameters) {
         this.parameters = parameters;
     }
 

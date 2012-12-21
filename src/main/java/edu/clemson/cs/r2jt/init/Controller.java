@@ -427,7 +427,7 @@ public class Controller {
         // -- ny
         else if (dec instanceof PerformanceEModuleDec) {
             List<Dec> decs = ((PerformanceEModuleDec) dec).getDecs();
-            Iterator<ModuleParameter> params =
+            Iterator<ModuleParameterDec> params =
                     (((PerformanceEModuleDec) dec).getParameters()).iterator();
             //TODO : fixup performance module parameter stuff
             //checkOpDecs(decs, dec, params);
@@ -1051,7 +1051,7 @@ public class Controller {
 
             // --ny
             if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
-                verifyModuleDec(mathSymTab, table, dec);
+                verifyModuleDec(symbolTable, table, dec);
                 //		verifyPerfModuleDec(context, dec);
             }
         }

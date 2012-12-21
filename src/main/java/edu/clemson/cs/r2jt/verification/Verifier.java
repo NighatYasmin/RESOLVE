@@ -5342,11 +5342,11 @@ public class Verifier extends ResolveConceptualVisitor {
         List<String> typeParms = new List<String>();
         PerformanceEModuleDec pDec =
                 (PerformanceEModuleDec) myInstanceEnvironment.getModuleDec(cid);
-        List<ModuleParameter> mpList = pDec.getParameters();
-        Iterator<ModuleParameter> mpIt = mpList.iterator();
-        ModuleParameter mp = null;
+        List<ModuleParameterDec> mpList = pDec.getParameters();
+        Iterator<ModuleParameterDec> mpIt = mpList.iterator();
+        Dec mp = null;
         while (mpIt.hasNext()) {
-            mp = mpIt.next();
+            mp = mpIt.next().getWrappedDec();
             if (mp instanceof ConceptTypeParamDec) {
                 typeParms.addUnique(((ConceptTypeParamDec) mp).getName()
                         .toString());

@@ -246,11 +246,14 @@ public class ImportScanner extends ResolveConceptualVisitor {
 
     // -- YS --NY
     public void visitPerformanceCModuleDec(PerformanceCModuleDec dec) {
+        annexConceptModule(dec.getProfilecName());
         visitUsesItemList(dec.getUsesItems());
     }
 
     // -- YS NY
     public void visitPerformanceEModuleDec(PerformanceEModuleDec dec) {
+        annexConceptModule(dec.getProfilecName());
+        annexEnhancementModule(dec.getProfileName3(), dec.getProfilecName());
         visitUsesItemList(dec.getUsesItems());
 
         if (dec.getProfilecpName() != null) {
