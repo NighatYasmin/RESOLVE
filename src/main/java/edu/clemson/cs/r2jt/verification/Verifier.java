@@ -116,7 +116,8 @@ public class Verifier extends ResolveConceptualVisitor {
     private boolean isInInterface = false;
 
     // NY This expression holds the duration
-    private Exp _Cum_Dur = null;
+    private Exp Cum_Dur = null;
+    private Exp Upper_Bnd_Dur = null;
     private PosSymbol Profile_Name = null;
     private PosSymbol Profile_CName = null;
     private PosSymbol Profile_CPName = null;
@@ -640,7 +641,7 @@ public class Verifier extends ResolveConceptualVisitor {
                             visitPerformanceOperationDec((PerformanceOperationDec) dec);
                             //  	_Cum_Dur = dec.getDuration();
                             System.out.println("Cum_Dur:  "
-                                    + _Cum_Dur.toString());
+                                    + Cum_Dur.toString());
                         }
                     }
                 }
@@ -674,8 +675,8 @@ public class Verifier extends ResolveConceptualVisitor {
                     Dec dec = i.next();
                     if (dec instanceof PerformanceOperationDec) {
                         visitPerformanceOperationDec((PerformanceOperationDec) dec);
-                        //  	_Cum_Dur = dec.getDuration();
-                        System.out.println("Cum_Dur:  " + _Cum_Dur);
+                        //  	Cum_Dur = dec.getDuration();
+                        System.out.println("Cum_Dur:  " + Cum_Dur);
 
                     }
                 }
@@ -814,9 +815,9 @@ public class Verifier extends ResolveConceptualVisitor {
                             if (dec.getName().getSymbol().toString() == operName) {
                                 pDec = (PerformanceOperationDec) dec;
                                 visitPerformanceOperationDec((PerformanceOperationDec) dec);
-                                _Cum_Dur = pDec.getDuration();
+                                Cum_Dur = pDec.getDuration();
                             }
-                            System.out.println("Cum_Dur:  " + _Cum_Dur);
+                            System.out.println("Cum_Dur:  " + Cum_Dur);
                         }
                     }
                 }
@@ -2242,9 +2243,9 @@ public class Verifier extends ResolveConceptualVisitor {
                             if (dec.getName().getSymbol().toString() == operName) {
                                 pDec = (PerformanceOperationDec) dec;
                                 visitPerformanceOperationDec((PerformanceOperationDec) dec);
-                                _Cum_Dur = pDec.getDuration();
+                                Cum_Dur = pDec.getDuration();
                             }
-                            System.out.println("Cum_Dur:  2171" + _Cum_Dur);
+                            System.out.println("Cum_Dur:  2171" + Cum_Dur);
                         }
                     }
                 }
@@ -7397,7 +7398,6 @@ public class Verifier extends ResolveConceptualVisitor {
         VCBuffer.append("\n");
         /* NY */
         if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
-            //    ModuleID pid = ModuleID.createPerformanceID(dec.getProfileName());
             Profile_EID = ModuleID.createPerformanceID(dec.getProfileName());
 
             PerformanceEModuleDec pEDec =
@@ -7407,8 +7407,8 @@ public class Verifier extends ResolveConceptualVisitor {
             visitPerformance_Related_Names(pEDec, list);
 
             visitPerformanceEModuleDec(pEDec);
-
             list.addAll(pEDec.getUsesItems());
+
             if (Profile_CName != null && pCPDec != null) {
                 visitPerformanceCModuleDec(pCPDec);
                 list.addAll(pCPDec.getUsesItems());
@@ -8572,6 +8572,14 @@ public class Verifier extends ResolveConceptualVisitor {
             else if (dec instanceof PerformanceOperationDec) {
                 visitPerformanceOperationDec((PerformanceOperationDec) dec);
             }
+            // --NY
+            else if (dec instanceof PerformanceEModuleDec) {
+                System.out.println("visitProcedures -> PerformanceEModuleDec");
+            }
+            // --NY
+            else if (dec instanceof PerformanceCModuleDec) {
+                System.out.println("visitProcedures -> PerformanceCModuleDec");
+            }
         }
     }
 
@@ -8962,6 +8970,7 @@ public class Verifier extends ResolveConceptualVisitor {
                                 .getModuleDec(Profile_CP_ID);
                 list.addAll(pCPDec.getUsesItems());
             }
+
             VCBuffer.append("Performance Operation Name: Need to be fixed\t");
             VCBuffer.append(dec1.getName().toString());
             VCBuffer.append("\n");
@@ -8980,6 +8989,8 @@ public class Verifier extends ResolveConceptualVisitor {
     // --NY   added for Performance
     public void visitPerformanceEModuleDec(PerformanceEModuleDec dec1) {
         table.beginModuleScope();
+        System.out.println("visitPerformanceEModuleDec");
+        System.out.println(dec1.getName().getName());
 
         // YS - Check to see if we have concept performance profile or a enhancement performance profile
         ModuleID cid;
@@ -9033,6 +9044,8 @@ public class Verifier extends ResolveConceptualVisitor {
 
     // --NY added for Performance
     public void visitPerformanceOperationDec(PerformanceOperationDec dec) {
+        Exp tmp = null;
+
         AssertiveCode assertion = new AssertiveCode(myInstanceEnvironment);
         //       table.beginPerformanceOperationScope();
         //       table.beginPerformanceProcedureScope();
@@ -9046,10 +9059,35 @@ public class Verifier extends ResolveConceptualVisitor {
         //    	VCBuffer.append("\nProcedure Declaration Rule Applied: \n\n");
         //    	VCBuffer.append(assertion.assertionToString());
 
-        _Cum_Dur = dec.getDuration();
+        if (pEDec != null) {
+            System.out.println("\n pEDec: \t" + pEDec.toString());
+        }
 
-        if (_Cum_Dur != null) {
-            //            assertion.addAssume(_Cum_Dur);
+        if (pCPDec != null) {
+            System.out.println("\n pCPDec: \t" + pCPDec.toString());
+        }
+
+        if (Cum_Dur == null) {
+            Cum_Dur = dec.getDuration();
+            Upper_Bnd_Dur = dec.getDuration();
+        }
+
+        else if (Cum_Dur != null) {
+
+            tmp = dec.getDuration();
+
+            PosSymbol opNameAdd = createPosSymbol("+");
+            PosSymbol opNameLE = createPosSymbol("<=");
+
+            Cum_Dur =
+                    new InfixExp(Cum_Dur.getLocation(), Cum_Dur, opNameAdd, tmp);
+            InfixExp UBD =
+                    new InfixExp(Cum_Dur.getLocation(), Cum_Dur, opNameLE,
+                            Upper_Bnd_Dur);
+
+            System.out.println("\n UBD: \t" + UBD.toString());
+
+            assertion.addAssume(Cum_Dur);
             //           assertion.addConfirm(_Cum_Dur);
             //          VCBuffer.append(assertion.assertionToString());
             //        VCBuffer.append(_Cum_Dur.toString());

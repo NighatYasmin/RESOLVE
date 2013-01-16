@@ -218,12 +218,14 @@ public class Populator extends TreeWalkerVisitor {
                 .getEnhancementName().getName()));
     }
 
+    // hampton
     @Override
     public void prePerformanceCModuleDec(PerformanceCModuleDec performanceModule) {
         myCurModuleScope.addImport(new ModuleIdentifier(performanceModule
                 .getProfilecName().getName()));
     }
 
+    // hampton
     @Override
     public void prePerformanceEModuleDec(PerformanceEModuleDec performanceModule) {
         myCurModuleScope.addImport(new ModuleIdentifier(performanceModule
@@ -541,6 +543,14 @@ public class Populator extends TreeWalkerVisitor {
         myCurrentParameters = new LinkedList<ProgramParameterEntry>();
     }
 
+    // hampton
+    @Override
+    public void prePerformanceOperationDec(PerformanceOperationDec dec) {
+        myBuilder.startScope(dec);
+
+        myCurrentParameters = new LinkedList<ProgramParameterEntry>();
+    }
+
     @Override
     public void midOperationDec(OperationDec node,
             ResolveConceptualElement prevChild,
@@ -563,8 +573,59 @@ public class Populator extends TreeWalkerVisitor {
         }
     }
 
+    // hampton
+    @Override
+    public void midPerformanceOperationDec(PerformanceOperationDec node,
+            ResolveConceptualElement prevChild,
+            ResolveConceptualElement nextChild) {
+
+        if (prevChild == node.getReturnTy() && node.getReturnTy() != null) {
+            try {
+                //Inside the operation's assertions, the name of the operation
+                //refers to its return value
+                myBuilder.getInnermostActiveScope().addBinding(
+                        node.getName().getName(), node,
+                        node.getReturnTy().getMathTypeValue());
+            }
+            catch (DuplicateSymbolException dse) {
+                //This shouldn't be possible--the operation declaration has a 
+                //scope all its own and we're the first ones to get to
+                //introduce anything
+                throw new RuntimeException(dse);
+            }
+        }
+    }
+
     @Override
     public void postOperationDec(OperationDec dec) {
+        myBuilder.endScope();
+
+        try {
+            Ty returnTy = dec.getReturnTy();
+            PTType returnType;
+            if (returnTy == null) {
+                returnType = PTVoid.getInstance(myTypeGraph);
+            }
+            else {
+                returnType = returnTy.getProgramTypeValue();
+            }
+
+            myBuilder.getInnermostActiveScope().addOperation(
+                    dec.getName().getName(), dec, myCurrentParameters,
+                    returnType);
+        }
+        catch (DuplicateSymbolException dse) {
+            duplicateSymbol(dec.getName().getName(), dec.getName()
+                    .getLocation());
+        }
+
+        myCurrentParameters = null;
+    }
+
+    // hampton
+    // ny, ys
+    @Override
+    public void postPerformanceOperationDec(PerformanceOperationDec dec) {
         myBuilder.endScope();
 
         try {
@@ -1400,6 +1461,62 @@ public class Populator extends TreeWalkerVisitor {
         }
 
         myBuilder.endScope();
+    }
+
+    // hampton
+    public void prePerformanceTypeDec(PerformanceTypeDec node) {
+        myBuilder.startScope(node);
+
+        try {
+            ProgramTypeEntry correspondingTypeDeclaration =
+                    myBuilder.getInnermostActiveScope().queryForOne(
+                            new NameAndEntryTypeQuery(null, node.getName(),
+                                    ProgramTypeEntry.class,
+                                    ImportStrategy.IMPORT_NAMED,
+                                    FacilityStrategy.FACILITY_IGNORE, false))
+                            .toProgramTypeEntry(null);
+
+            TypeDec dec =
+                    (TypeDec) correspondingTypeDeclaration.getDefiningElement();
+
+            PosSymbol exemplar = dec.getExemplar();
+
+            if (exemplar != null) {
+                try {
+                    myBuilder.getInnermostActiveScope().addBinding(
+                            exemplar.getName(), dec,
+                            dec.getModel().getMathTypeValue());
+                }
+                catch (DuplicateSymbolException dse) {
+                    //This shouldn't be possible--the type declaration has a 
+                    //scope all its own and we're the first ones to get to
+                    //introduce anything
+                    throw new RuntimeException(dse);
+                }
+            }
+        }
+        catch (DuplicateSymbolException dse) {
+            throw new SourceErrorException("Multiple types named "
+                    + node.getName() + ".", node.getName().getLocation());
+        }
+        catch (NoSuchSymbolException nsse) {
+            throw new SourceErrorException(
+                    "No corresponding type definition for \"" + node.getName()
+                            + "\".", node.getName().getLocation());
+        }
+    }
+
+    // hampton
+    public void postPerformanceTypeDec(PerformanceTypeDec node) {
+        myBuilder.endScope();
+    }
+
+    // hampton
+    public void postDotExp(DotExp e) {
+        List<Exp> eSegments = e.getSegments();
+        Exp lastSegment = eSegments.get(eSegments.size() - 1);
+        e.setMathType(lastSegment.getMathType());
+        e.setMathTypeValue(lastSegment.getMathTypeValue());
     }
 
     @Override
