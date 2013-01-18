@@ -1464,6 +1464,7 @@ public class Populator extends TreeWalkerVisitor {
     }
 
     // hampton
+    @Override
     public void prePerformanceTypeDec(PerformanceTypeDec node) {
         myBuilder.startScope(node);
 
@@ -1507,6 +1508,7 @@ public class Populator extends TreeWalkerVisitor {
     }
 
     // hampton
+    @Override
     public void postPerformanceTypeDec(PerformanceTypeDec node) {
         myBuilder.endScope();
     }
