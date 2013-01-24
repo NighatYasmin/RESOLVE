@@ -87,6 +87,12 @@ import edu.clemson.cs.r2jt.analysis.TypeResolutionException;
 import edu.clemson.cs.r2jt.analysis.ProgramExpTypeResolver;
 import edu.clemson.cs.r2jt.errors.ErrorHandler;
 import edu.clemson.cs.r2jt.typeandpopulate.MathSymbolTableBuilder;
+import edu.clemson.cs.r2jt.typeandpopulate.DuplicateSymbolException;
+import edu.clemson.cs.r2jt.typeandpopulate.MathSymbolTableBuilder;
+import edu.clemson.cs.r2jt.typeandpopulate.NoSuchSymbolException;
+import edu.clemson.cs.r2jt.typeandpopulate.programtypes.PTType;
+import edu.clemson.cs.r2jt.typeandpopulate.query.OperationQuery;
+import edu.clemson.cs.r2jt.utilities.SourceErrorException;
 
 public class Verifier extends ResolveConceptualVisitor {
 
@@ -8536,6 +8542,47 @@ public class Verifier extends ResolveConceptualVisitor {
             assertion.setFinalConfirm(ensures);
         }
 
+        /* ys - adding code for performance */
+        if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
+            // get iterator on list of statements
+            Iterator<Statement> itStatement = dec.getStatements().iterator();
+
+            // loop
+            while (itStatement.hasNext()) {
+                Statement curStatement = itStatement.next();
+
+                if (curStatement instanceof CallStmt) {
+                    CallStmt curCallStmt = ((CallStmt) curStatement);
+                    List<ProgramExp> args = curCallStmt.getArguments();
+
+                    java.util.List<PTType> argTypes = new LinkedList<PTType>();
+                    for (ProgramExp arg : args) {
+                        argTypes.add(arg.getProgramType());
+                    }
+
+                    try {
+                        edu.clemson.cs.r2jt.typeandpopulate.entry.OperationEntry op =
+                                ((MathSymbolTableBuilder) myRealSymbolTable)
+                                        .getScope(dec).queryForOne(
+                                                new OperationQuery(null,
+                                                        curCallStmt.getName(),
+                                                        argTypes));
+
+                        System.out.println(op.getName());
+                    }
+                    catch (NoSuchSymbolException nsse) {
+                        noSuchSymbol(null, curCallStmt.getName().getName(),
+                                curCallStmt.getLocation());
+                    }
+                    catch (DuplicateSymbolException dse) {
+                        //This should be caught earlier, when the duplicate operation is
+                        //created
+                        throw new RuntimeException(dse);
+                    }
+                }
+            }
+        }
+
         VCBuffer.append("\n Procedure Name:\t");
         VCBuffer.append(dec.getName().getSymbol().toString());
         VCBuffer.append("\n");
@@ -9108,5 +9155,21 @@ public class Verifier extends ResolveConceptualVisitor {
         //     VCBuffer.append("\n_____________________ \n\n");
         //        table.endPerformanceProcedureScope();
         //        table.endPerformanceOperationScope();
+    }
+
+    public void noSuchSymbol(PosSymbol qualifier, String symbolName, Location l) {
+
+        String message;
+
+        if (qualifier == null) {
+            message = "No such symbol: " + symbolName;
+        }
+        else {
+            message =
+                    "No such symbol in module: " + qualifier.getName() + "."
+                            + symbolName;
+        }
+
+        throw new SourceErrorException(message, l);
     }
 }

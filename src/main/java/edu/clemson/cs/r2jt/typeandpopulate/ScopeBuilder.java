@@ -22,6 +22,7 @@ import edu.clemson.cs.r2jt.absyn.RepresentationDec;
 import edu.clemson.cs.r2jt.absyn.ResolveConceptualElement;
 import edu.clemson.cs.r2jt.absyn.TypeDec;
 import edu.clemson.cs.r2jt.data.PosSymbol;
+import edu.clemson.cs.r2jt.typeandpopulate.entry.OperationProfileEntry;
 import edu.clemson.cs.r2jt.typeandpopulate.entry.TheoremEntry;
 import edu.clemson.cs.r2jt.typeandpopulate.entry.ProgramParameterEntry.ParameterMode;
 import edu.clemson.cs.r2jt.typeandpopulate.entry.ProgramTypeDefinitionEntry;
@@ -29,7 +30,6 @@ import edu.clemson.cs.r2jt.typeandpopulate.entry.RepresentationTypeEntry;
 import edu.clemson.cs.r2jt.typeandpopulate.programtypes.PTRepresentation;
 import edu.clemson.cs.r2jt.typereasoning.TypeGraph;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * <p>A <code>ScopeBuilder</code> is a working, mutable realization of 
@@ -114,6 +114,23 @@ public class ScopeBuilder extends SyntacticScope {
 
         OperationEntry entry =
                 new OperationEntry(name, definingElement, myRootModule,
+                        returnType, params);
+
+        myBindings.put(name, entry);
+
+        return entry;
+    }
+
+    // ys
+    public OperationProfileEntry addProfile(String name,
+            ResolveConceptualElement definingElement,
+            List<ProgramParameterEntry> params, PTType returnType)
+            throws DuplicateSymbolException {
+
+        sanityCheckBindArguments(name, definingElement, returnType);
+
+        OperationProfileEntry entry =
+                new OperationProfileEntry(name, definingElement, myRootModule,
                         returnType, params);
 
         myBindings.put(name, entry);

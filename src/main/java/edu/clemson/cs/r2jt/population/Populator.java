@@ -610,7 +610,7 @@ public class Populator extends TreeWalkerVisitor {
                 returnType = returnTy.getProgramTypeValue();
             }
 
-            myBuilder.getInnermostActiveScope().addOperation(
+            myBuilder.getInnermostActiveScope().addProfile(
                     dec.getName().getName(), dec, myCurrentParameters,
                     returnType);
         }
