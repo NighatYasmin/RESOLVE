@@ -7409,7 +7409,7 @@ public class Verifier extends ResolveConceptualVisitor {
             visitPerformanceEModuleDec(pEDec);
             list.addAll(pEDec.getUsesItems());
 
-           if (Profile_CName != null && pCPDec != null) {
+            if (Profile_CName != null && pCPDec != null) {
                 visitPerformanceCModuleDec(pCPDec);
                 list.addAll(pCPDec.getUsesItems());
             }
