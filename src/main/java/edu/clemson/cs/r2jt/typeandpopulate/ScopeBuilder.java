@@ -122,16 +122,16 @@ public class ScopeBuilder extends SyntacticScope {
     }
 
     // ys
-    public OperationProfileEntry addProfile(String name,
+    public OperationProfileEntry addOperationProfile(String name,
             ResolveConceptualElement definingElement,
-            List<ProgramParameterEntry> params, PTType returnType)
+            OperationEntry correspondingOperation)
             throws DuplicateSymbolException {
 
-        sanityCheckBindArguments(name, definingElement, returnType);
+        sanityCheckBindArguments(name, definingElement, "");
 
         OperationProfileEntry entry =
                 new OperationProfileEntry(name, definingElement, myRootModule,
-                        returnType, params);
+                        correspondingOperation);
 
         myBindings.put(name, entry);
 

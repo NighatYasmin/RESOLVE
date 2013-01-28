@@ -1,11 +1,9 @@
 package edu.clemson.cs.r2jt.typeandpopulate.entry;
 
 import edu.clemson.cs.r2jt.absyn.ResolveConceptualElement;
-import edu.clemson.cs.r2jt.proving.immutableadts.ArrayBackedImmutableList;
-import edu.clemson.cs.r2jt.proving.immutableadts.ImmutableList;
+import edu.clemson.cs.r2jt.data.Location;
 import edu.clemson.cs.r2jt.typeandpopulate.ModuleIdentifier;
 import edu.clemson.cs.r2jt.typeandpopulate.programtypes.PTType;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -14,35 +12,19 @@ import java.util.Map;
  */
 public class OperationProfileEntry extends SymbolTableEntry {
 
-    private final PTType myReturnType;
-    private final ImmutableList<ProgramParameterEntry> myParameters;
+    private final OperationEntry myCorrespondingOperation;
 
     public OperationProfileEntry(String name,
             ResolveConceptualElement definingElement,
-            ModuleIdentifier sourceModule, PTType returnType,
-            List<ProgramParameterEntry> parameters) {
-
-        this(name, definingElement, sourceModule, returnType,
-                new ArrayBackedImmutableList<ProgramParameterEntry>(parameters));
-    }
-
-    public OperationProfileEntry(String name,
-            ResolveConceptualElement definingElement,
-            ModuleIdentifier sourceModule, PTType returnType,
-            ImmutableList<ProgramParameterEntry> parameters) {
+            ModuleIdentifier sourceModule, OperationEntry correspondingOperation) {
 
         super(name, definingElement, sourceModule);
 
-        myParameters = parameters;
-        myReturnType = returnType;
+        myCorrespondingOperation = correspondingOperation;
     }
 
-    public ImmutableList<ProgramParameterEntry> getParameters() {
-        return myParameters;
-    }
-
-    public PTType getReturnType() {
-        return myReturnType;
+    public OperationEntry getCorrespondingOperation() {
+        return myCorrespondingOperation;
     }
 
     @Override
@@ -57,4 +39,8 @@ public class OperationProfileEntry extends SymbolTableEntry {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Override
+    public OperationProfileEntry toOperationProfileEntry(Location l) {
+        return this;
+    }
 }

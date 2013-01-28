@@ -91,6 +91,7 @@ import edu.clemson.cs.r2jt.typeandpopulate.DuplicateSymbolException;
 import edu.clemson.cs.r2jt.typeandpopulate.MathSymbolTableBuilder;
 import edu.clemson.cs.r2jt.typeandpopulate.NoSuchSymbolException;
 import edu.clemson.cs.r2jt.typeandpopulate.programtypes.PTType;
+import edu.clemson.cs.r2jt.typeandpopulate.query.OperationProfileQuery;
 import edu.clemson.cs.r2jt.typeandpopulate.query.OperationQuery;
 import edu.clemson.cs.r2jt.utilities.SourceErrorException;
 
@@ -8561,13 +8562,13 @@ public class Verifier extends ResolveConceptualVisitor {
                     }
 
                     try {
-                        edu.clemson.cs.r2jt.typeandpopulate.entry.OperationEntry op =
-                                ((MathSymbolTableBuilder) myRealSymbolTable)
-                                        .getScope(dec).queryForOne(
-                                                new OperationQuery(null,
+                        edu.clemson.cs.r2jt.typeandpopulate.entry.OperationProfileEntry op =
+                                myRealSymbolTable.getScope(dec)
+                                        .queryForOne(
+                                                new OperationProfileQuery(null,
                                                         curCallStmt.getName(),
                                                         argTypes));
-
+                        System.out.println("I am here!");
                         System.out.println(op.getName());
                     }
                     catch (NoSuchSymbolException nsse) {

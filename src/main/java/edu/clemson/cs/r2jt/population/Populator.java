@@ -544,11 +544,38 @@ public class Populator extends TreeWalkerVisitor {
     }
 
     // hampton
+    // ys
     @Override
     public void prePerformanceOperationDec(PerformanceOperationDec dec) {
-        myBuilder.startScope(dec);
 
-        myCurrentParameters = new LinkedList<ProgramParameterEntry>();
+        try {
+            //Figure out what Operation we correspond to (we don't use 
+            //OperationQuery because we want to check parameter types 
+            //separately in postProcedureDec)
+            myCorrespondingOperation =
+                    myBuilder.getInnermostActiveScope().queryForOne(
+                            new NameAndEntryTypeQuery(null, dec.getName(),
+                                    OperationEntry.class,
+                                    ImportStrategy.IMPORT_NAMED,
+                                    FacilityStrategy.FACILITY_IGNORE, false))
+                            .toOperationEntry(dec.getLocation());
+
+            myBuilder.startScope(dec);
+
+            myCurrentParameters = new LinkedList<ProgramParameterEntry>();
+        }
+        catch (NoSuchSymbolException nsse) {
+            throw new SourceErrorException("Procedure "
+                    + dec.getName().getName()
+                    + " does not implement any known operation.", dec.getName()
+                    .getLocation());
+        }
+        catch (DuplicateSymbolException dse) {
+            //We should have caught this before now, like when we defined the
+            //duplicate Operation
+            throw new RuntimeException("Duplicate Operations for "
+                    + dec.getName().getName() + "?");
+        }
     }
 
     @Override
@@ -601,18 +628,8 @@ public class Populator extends TreeWalkerVisitor {
         myBuilder.endScope();
 
         try {
-            Ty returnTy = dec.getReturnTy();
-            PTType returnType;
-            if (returnTy == null) {
-                returnType = PTVoid.getInstance(myTypeGraph);
-            }
-            else {
-                returnType = returnTy.getProgramTypeValue();
-            }
-
-            myBuilder.getInnermostActiveScope().addProfile(
-                    dec.getName().getName(), dec, myCurrentParameters,
-                    returnType);
+            myBuilder.getInnermostActiveScope().addOperationProfile(
+                    dec.getName().getName(), dec, myCorrespondingOperation);
         }
         catch (DuplicateSymbolException dse) {
             duplicateSymbol(dec.getName().getName(), dec.getName()
