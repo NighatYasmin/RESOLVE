@@ -2,10 +2,10 @@ package edu.clemson.cs.r2jt.typeandpopulate.query;
 
 import edu.clemson.cs.r2jt.data.PosSymbol;
 import edu.clemson.cs.r2jt.typeandpopulate.MathSymbolTable;
-import edu.clemson.cs.r2jt.typeandpopulate.searchers.OperationSearcher;
-import edu.clemson.cs.r2jt.typeandpopulate.programtypes.PTType;
 import edu.clemson.cs.r2jt.typeandpopulate.PossiblyQualifiedPath;
 import edu.clemson.cs.r2jt.typeandpopulate.entry.OperationEntry;
+import edu.clemson.cs.r2jt.typeandpopulate.programtypes.PTType;
+import edu.clemson.cs.r2jt.typeandpopulate.searchers.OperationSearcher;
 import java.util.List;
 
 /**
