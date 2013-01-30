@@ -206,6 +206,7 @@ public class Populator extends TreeWalkerVisitor {
                 .getConceptName().getName()));
     }
 
+    // ys (edits)
     @Override
     public void preEnhancementBodyModuleDec(
             EnhancementBodyModuleDec enhancementRealization) {
@@ -216,6 +217,14 @@ public class Populator extends TreeWalkerVisitor {
                 .getConceptName().getName()));
         myCurModuleScope.addImport(new ModuleIdentifier(enhancementRealization
                 .getEnhancementName().getName()));
+
+        //Enhancement realizations implicitly import the performance profiles
+        //if they are specified.
+        PosSymbol profileName = enhancementRealization.getProfileName();
+        if (profileName != null) {
+            myCurModuleScope.addImport(new ModuleIdentifier(profileName
+                    .getName()));
+        }
     }
 
     // hampton

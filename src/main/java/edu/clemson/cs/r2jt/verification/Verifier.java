@@ -8552,24 +8552,25 @@ public class Verifier extends ResolveConceptualVisitor {
             while (itStatement.hasNext()) {
                 Statement curStatement = itStatement.next();
 
+                // Check for a callstmt
                 if (curStatement instanceof CallStmt) {
                     CallStmt curCallStmt = ((CallStmt) curStatement);
                     List<ProgramExp> args = curCallStmt.getArguments();
 
+                    // form a list of PTType from ProgramExp
                     java.util.List<PTType> argTypes = new LinkedList<PTType>();
                     for (ProgramExp arg : args) {
                         argTypes.add(arg.getProgramType());
                     }
 
                     try {
+                        // search for the operation profile in the symbol table
                         edu.clemson.cs.r2jt.typeandpopulate.entry.OperationProfileEntry op =
                                 myRealSymbolTable.getScope(dec)
                                         .queryForOne(
                                                 new OperationProfileQuery(null,
                                                         curCallStmt.getName(),
                                                         argTypes));
-                        System.out.println("I am here!");
-                        System.out.println(op.getName());
                     }
                     catch (NoSuchSymbolException nsse) {
                         noSuchSymbol(null, curCallStmt.getName().getName(),

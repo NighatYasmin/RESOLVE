@@ -24,7 +24,7 @@ public class OperationProfileQuery
     public OperationProfileQuery(PosSymbol qualifier, PosSymbol name,
             List<PTType> argumentTypes) {
         super(new PossiblyQualifiedPath(qualifier,
-                MathSymbolTable.ImportStrategy.IMPORT_NAMED,
+                MathSymbolTable.ImportStrategy.IMPORT_RECURSIVE,
                 MathSymbolTable.FacilityStrategy.FACILITY_INSTANTIATE, false),
                 new OperationProfileSearcher(name, argumentTypes));
     }
