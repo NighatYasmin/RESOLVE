@@ -90,10 +90,16 @@ import edu.clemson.cs.r2jt.typeandpopulate.MathSymbolTableBuilder;
 import edu.clemson.cs.r2jt.typeandpopulate.DuplicateSymbolException;
 import edu.clemson.cs.r2jt.typeandpopulate.MathSymbolTableBuilder;
 import edu.clemson.cs.r2jt.typeandpopulate.NoSuchSymbolException;
+import edu.clemson.cs.r2jt.typeandpopulate.ScopeBuilder;
+import edu.clemson.cs.r2jt.typeandpopulate.entry.ProcedureEntry;
+import edu.clemson.cs.r2jt.typeandpopulate.entry.SymbolTableEntry;
 import edu.clemson.cs.r2jt.typeandpopulate.programtypes.PTType;
+import edu.clemson.cs.r2jt.typeandpopulate.query.NameQuery;
 import edu.clemson.cs.r2jt.typeandpopulate.query.OperationProfileQuery;
 import edu.clemson.cs.r2jt.typeandpopulate.query.OperationQuery;
 import edu.clemson.cs.r2jt.utilities.SourceErrorException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Verifier extends ResolveConceptualVisitor {
 
@@ -8548,6 +8554,9 @@ public class Verifier extends ResolveConceptualVisitor {
             // get iterator on list of statements
             Iterator<Statement> itStatement = dec.getStatements().iterator();
 
+            // ny
+            List<Exp> expList = new List<Exp>();
+
             // loop
             while (itStatement.hasNext()) {
                 Statement curStatement = itStatement.next();
@@ -8571,6 +8580,11 @@ public class Verifier extends ResolveConceptualVisitor {
                                                 new OperationProfileQuery(null,
                                                         curCallStmt.getName(),
                                                         argTypes));
+                        System.out.print("Verifier: Line 8570 - ");
+                        System.out.println(op.getDurationClause());
+                        //     if (op.getDurationClause() != null) {
+                        expList.add(op.getDurationClause());
+                        //      } // ny
                     }
                     catch (NoSuchSymbolException nsse) {
                         noSuchSymbol(null, curCallStmt.getName().getName(),
@@ -8583,6 +8597,81 @@ public class Verifier extends ResolveConceptualVisitor {
                     }
                 }
             }
+
+            // ny - code to combine the duration Exp
+            Cum_Dur = null;
+            PosSymbol opNameAdd_itDur = createPosSymbol("+");
+            Iterator<Exp> itDur = expList.iterator();
+            while (itDur.hasNext()) {
+                Exp tmp = itDur.next();
+                if (Cum_Dur == null) {
+                    Cum_Dur = tmp;
+                }
+                else {
+
+                    Cum_Dur =
+                            new InfixExp(Cum_Dur.getLocation(), Cum_Dur,
+                                    opNameAdd_itDur, tmp);
+                }
+            }
+            System.out.println("\n 8596  Cum_Dur: \t" + Cum_Dur.toString());
+
+            // ys - code for retrieving duration for Do_Nothing goes here.
+           // try {
+                // search for the operation profile in the symbol table
+                ScopeBuilder sb = null;
+                if (moduleDec instanceof EnhancementBodyModuleDec) {
+                    EnhancementBodyModuleDec ebmd = (EnhancementBodyModuleDec) moduleDec;
+                    PosSymbol po = ebmd.getProfileName();
+                    
+                try {
+                    SymbolTableEntry el =
+                        myRealSymbolTable
+                                .getScope(ebmd)
+                                .queryForOne(
+                                        new NameQuery(
+                                                null,
+                                                dec.getName().getName(),
+                                                MathSymbolTable.ImportStrategy.IMPORT_RECURSIVE,
+                                                MathSymbolTable.FacilityStrategy.FACILITY_IGNORE,
+                                                false));
+                    
+                    System.out.println(el.toString());
+                } catch (NoSuchSymbolException ex) {
+                    Logger.getLogger(Verifier.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (DuplicateSymbolException ex) {
+                    Logger.getLogger(Verifier.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                                      
+                }                 
+                /*SymbolTableEntry el =
+                        myRealSymbolTable
+                                .getScope(dec)
+                                .queryForOne(
+                                        new NameQuery(
+                                                null,
+                                                dec.getName().getName(),
+                                                MathSymbolTable.ImportStrategy.IMPORT_RECURSIVE,
+                                                MathSymbolTable.FacilityStrategy.FACILITY_IGNORE,
+                                                true));
+                // search for the operation profile in the symbol table
+                edu.clemson.cs.r2jt.typeandpopulate.entry.OperationProfileEntry op2 =
+                        myRealSymbolTable.getScope(dec).queryForOne(
+                                new OperationProfileQuery(null, dec.getName(),
+                                        null));
+                System.out.println(op2.toString());*/
+           // }
+           // catch (NoSuchSymbolException nsse) {
+               // noSuchSymbol(null, dec.getName().getName(), dec.getLocation());
+           // }
+          //  catch (DuplicateSymbolException dse) {
+                //This should be caught earlier, when the duplicate operation is
+                //created
+               // throw new RuntimeException(dse);
+           // }
+
+            // ny - add VC to assertive code
+                System.out.println("Something");
         }
 
         VCBuffer.append("\n Procedure Name:\t");

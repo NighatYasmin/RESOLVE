@@ -35,15 +35,15 @@ public class OperationProfileEntry extends SymbolTableEntry {
     public OperationEntry getCorrespondingOperation() {
         return myCorrespondingOperation;
     }
-    
+
     public Exp getEnsuresClause() {
         return myEnsures;
     }
-    
+
     public Exp getDurationClause() {
         return myDuration;
     }
-    
+
     public Exp getManipDispClause() {
         return myManipDisp;
     }
