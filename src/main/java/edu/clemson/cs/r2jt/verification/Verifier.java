@@ -89,8 +89,11 @@ import edu.clemson.cs.r2jt.errors.ErrorHandler;
 import edu.clemson.cs.r2jt.typeandpopulate.MathSymbolTableBuilder;
 import edu.clemson.cs.r2jt.typeandpopulate.DuplicateSymbolException;
 import edu.clemson.cs.r2jt.typeandpopulate.MathSymbolTableBuilder;
+import edu.clemson.cs.r2jt.typeandpopulate.ModuleIdentifier;
+import edu.clemson.cs.r2jt.typeandpopulate.ModuleScopeBuilder;
 import edu.clemson.cs.r2jt.typeandpopulate.NoSuchSymbolException;
 import edu.clemson.cs.r2jt.typeandpopulate.ScopeBuilder;
+import edu.clemson.cs.r2jt.typeandpopulate.entry.OperationProfileEntry;
 import edu.clemson.cs.r2jt.typeandpopulate.entry.ProcedureEntry;
 import edu.clemson.cs.r2jt.typeandpopulate.entry.SymbolTableEntry;
 import edu.clemson.cs.r2jt.typeandpopulate.programtypes.PTType;
@@ -8574,7 +8577,7 @@ public class Verifier extends ResolveConceptualVisitor {
 
                     try {
                         // search for the operation profile in the symbol table
-                        edu.clemson.cs.r2jt.typeandpopulate.entry.OperationProfileEntry op =
+                        OperationProfileEntry op =
                                 myRealSymbolTable.getScope(dec)
                                         .queryForOne(
                                                 new OperationProfileQuery(null,
@@ -8617,61 +8620,51 @@ public class Verifier extends ResolveConceptualVisitor {
             System.out.println("\n 8596  Cum_Dur: \t" + Cum_Dur.toString());
 
             // ys - code for retrieving duration for Do_Nothing goes here.
-           // try {
-                // search for the operation profile in the symbol table
-                ScopeBuilder sb = null;
-                if (moduleDec instanceof EnhancementBodyModuleDec) {
-                    EnhancementBodyModuleDec ebmd = (EnhancementBodyModuleDec) moduleDec;
-                    PosSymbol po = ebmd.getProfileName();
-                    
+            if (moduleDec instanceof EnhancementBodyModuleDec) {
+                // Type cast to EnhancementBodyModuleDec
+                EnhancementBodyModuleDec ebmd =
+                        (EnhancementBodyModuleDec) moduleDec;
+
+                // Retrieve the scope repository containing all the scopes
+                ScopeRepository sr =
+                        myRealSymbolTable.getScope(ebmd).getSourceRepository();
                 try {
-                    SymbolTableEntry el =
-                        myRealSymbolTable
-                                .getScope(ebmd)
-                                .queryForOne(
-                                        new NameQuery(
-                                                null,
-                                                dec.getName().getName(),
-                                                MathSymbolTable.ImportStrategy.IMPORT_RECURSIVE,
-                                                MathSymbolTable.FacilityStrategy.FACILITY_IGNORE,
-                                                false));
-                    
-                    System.out.println(el.toString());
-                } catch (NoSuchSymbolException ex) {
-                    Logger.getLogger(Verifier.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (DuplicateSymbolException ex) {
-                    Logger.getLogger(Verifier.class.getName()).log(Level.SEVERE, null, ex);
+                    // Retrieve the scope identifier for the performance
+                    // profiles.
+                    ModuleIdentifier mi =
+                            sr.getModuleScope(
+                                    new ModuleIdentifier(ebmd.getProfileName()
+                                            .getName())).getModuleIdentifier();
+
+                    // Retrieve the scope with the module identifier specified.
+                    ModuleScopeBuilder msb =
+                            myRealSymbolTable.getModuleScope(mi);
+
+                    // Retrieve the OperationProfileEntry for this ProcedureDec
+                    try {
+                        OperationProfileEntry ope =
+                                ((OperationProfileEntry) msb
+                                        .queryForOne(new NameQuery(null, dec
+                                                .getName())));
+                    }
+                    catch (NoSuchSymbolException nsse) {
+                        noSuchSymbol(null, dec.getName().getName(), dec
+                                .getLocation());
+                    }
+                    catch (DuplicateSymbolException dse) {
+                        //This should be caught earlier, when the duplicate operation is
+                        //created
+                        throw new RuntimeException(dse);
+                    }
+
                 }
-                                      
-                }                 
-                /*SymbolTableEntry el =
-                        myRealSymbolTable
-                                .getScope(dec)
-                                .queryForOne(
-                                        new NameQuery(
-                                                null,
-                                                dec.getName().getName(),
-                                                MathSymbolTable.ImportStrategy.IMPORT_RECURSIVE,
-                                                MathSymbolTable.FacilityStrategy.FACILITY_IGNORE,
-                                                true));
-                // search for the operation profile in the symbol table
-                edu.clemson.cs.r2jt.typeandpopulate.entry.OperationProfileEntry op2 =
-                        myRealSymbolTable.getScope(dec).queryForOne(
-                                new OperationProfileQuery(null, dec.getName(),
-                                        null));
-                System.out.println(op2.toString());*/
-           // }
-           // catch (NoSuchSymbolException nsse) {
-               // noSuchSymbol(null, dec.getName().getName(), dec.getLocation());
-           // }
-          //  catch (DuplicateSymbolException dse) {
-                //This should be caught earlier, when the duplicate operation is
-                //created
-               // throw new RuntimeException(dse);
-           // }
+                catch (NoSuchSymbolException ex) {
+                    noSuchSymbol(null, ebmd.getProfileName().getName(), ebmd
+                            .getLocation());
+                }
+            }
 
             // ny - add VC to assertive code
-                System.out.println("Something");
         }
 
         VCBuffer.append("\n Procedure Name:\t");
