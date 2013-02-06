@@ -8602,18 +8602,19 @@ public class Verifier extends ResolveConceptualVisitor {
             }
 
             // ny - code to combine the duration Exp
-            Exp cumDur = null;
+            Cum_Dur = null;
             PosSymbol opNameAdd_itDur = createPosSymbol("+");
             Iterator<Exp> itDur = expList.iterator();
             while (itDur.hasNext()) {
                 Exp tmp = itDur.next();
-                if (cumDur == null) {
-                    cumDur = tmp;
+                if (Cum_Dur == null) {
+                    Cum_Dur = tmp;
                 }
                 else {
-                    cumDur =
+                    Cum_Dur =
                             new InfixExp(Cum_Dur.getLocation(), Cum_Dur,
                                     opNameAdd_itDur, tmp);
+                    Cum_Dur.setMathType(myTypeGraph.R);
                 }
             }
             System.out.println("\n 8596  Cum_Dur: \t" + Cum_Dur.toString());
@@ -8666,9 +8667,12 @@ public class Verifier extends ResolveConceptualVisitor {
             }
 
             // ny, ys - add VC to assertive code
-            if (procDur != null && cumDur != null) {
+            if (procDur != null && Cum_Dur != null) {
+                PosSymbol lessEq = createPosSymbol("<=");
                 Exp duration =
-                        new EqualsExp(dec.getLocation(), procDur, 1, cumDur);
+                        new InfixExp(dec.getLocation(), Cum_Dur, lessEq,
+                                procDur);
+                duration.setMathType(myTypeGraph.R);
                 assertion.addConfirm(duration);
             }
         }
