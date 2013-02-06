@@ -8602,17 +8602,16 @@ public class Verifier extends ResolveConceptualVisitor {
             }
 
             // ny - code to combine the duration Exp
-            Cum_Dur = null;
+            Exp cumDur = null;
             PosSymbol opNameAdd_itDur = createPosSymbol("+");
             Iterator<Exp> itDur = expList.iterator();
             while (itDur.hasNext()) {
                 Exp tmp = itDur.next();
-                if (Cum_Dur == null) {
-                    Cum_Dur = tmp;
+                if (cumDur == null) {
+                    cumDur = tmp;
                 }
                 else {
-
-                    Cum_Dur =
+                    cumDur =
                             new InfixExp(Cum_Dur.getLocation(), Cum_Dur,
                                     opNameAdd_itDur, tmp);
                 }
@@ -8620,6 +8619,7 @@ public class Verifier extends ResolveConceptualVisitor {
             System.out.println("\n 8596  Cum_Dur: \t" + Cum_Dur.toString());
 
             // ys - code for retrieving duration for Do_Nothing goes here.
+            Exp procDur = null;
             if (moduleDec instanceof EnhancementBodyModuleDec) {
                 // Type cast to EnhancementBodyModuleDec
                 EnhancementBodyModuleDec ebmd =
@@ -8646,6 +8646,7 @@ public class Verifier extends ResolveConceptualVisitor {
                                 ((OperationProfileEntry) msb
                                         .queryForOne(new NameQuery(null, dec
                                                 .getName())));
+                        procDur = ope.getDurationClause();
                     }
                     catch (NoSuchSymbolException nsse) {
                         noSuchSymbol(null, dec.getName().getName(), dec
@@ -8664,7 +8665,12 @@ public class Verifier extends ResolveConceptualVisitor {
                 }
             }
 
-            // ny - add VC to assertive code
+            // ny, ys - add VC to assertive code
+            if (procDur != null && cumDur != null) {
+                Exp duration =
+                        new EqualsExp(dec.getLocation(), procDur, 1, cumDur);
+                assertion.addConfirm(duration);
+            }
         }
 
         VCBuffer.append("\n Procedure Name:\t");
