@@ -622,11 +622,11 @@ public class AssertiveCode implements Cloneable {
                 //if(XMLfile) sb.append("<vcGoal>");
                 if (XMLfile) {
                     sb.append("\",");
-                    sb.append("\"vcGoal\":630\"");
+                    sb.append("\"vcGoal\":625\"");
                 }
                 //tb.append("Confirm: " + tmpInf.toString(0) + "\n");
                 /* Stuff inside the goal tag */
-                tb.append("Goal:634\n");
+                tb.append("Goal:629\n");
                 provePart = true;
                 tb.append(printer.clearAndVisitAssertion(tmpInf.getRight()));
                 /* end goal tag */

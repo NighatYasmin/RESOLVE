@@ -460,7 +460,8 @@ public class Verifier extends ResolveConceptualVisitor {
                 && ((VarExp) assume.getAssertion()).getName().toString()
                         .equals(getTrueVarExp().getName().toString())) {
             VCBuffer.append("\n_____________________ \n");
-            VCBuffer.append("\nAssume Rule Applied and Simplified: \n");
+            VCBuffer
+                    .append("\nAssume Rule Applied and Simplified:       Verifier 463\n");
             VCBuffer.append(assertion.assertionToString());
         }
         else {
@@ -476,7 +477,7 @@ public class Verifier extends ResolveConceptualVisitor {
             newConf.setRight(conf);
             assertion.setFinalConfirm(newConf);
             VCBuffer.append("\n_____________________ \n");
-            VCBuffer.append("\nAssume Rule Applied: \n");
+            VCBuffer.append("\nAssume Rule Applied:      Verifier 479\n");
             VCBuffer.append(assertion.assertionToString());
         }
     }
@@ -538,7 +539,8 @@ public class Verifier extends ResolveConceptualVisitor {
                 && ((VarExp) confirm.getAssertion()).getName().toString()
                         .equals(getTrueVarExp().getName().toString())) {
             VCBuffer.append("\n_____________________ \n");
-            VCBuffer.append("\nConfirm Rule Applied and Simplified: \n");
+            VCBuffer
+                    .append("\nConfirm Rule Applied and Simplified:  Verifier 541\n");
             VCBuffer.append(assertion.assertionToString());
         }
         else {
@@ -556,7 +558,7 @@ public class Verifier extends ResolveConceptualVisitor {
 
             assertion.setFinalConfirm(newConf);
             VCBuffer.append("\n_____________________ \n");
-            VCBuffer.append("\nConfirm Rule Applied: \n");
+            VCBuffer.append("\nConfirm Rule Applied:    Verifier 459\n");
             VCBuffer.append(assertion.assertionToString());
         }
 
@@ -8583,7 +8585,7 @@ public class Verifier extends ResolveConceptualVisitor {
                                                 new OperationProfileQuery(null,
                                                         curCallStmt.getName(),
                                                         argTypes));
-                        System.out.print("Verifier: Line 8570 - ");
+                        System.out.print("Verifier: Line 8583 - ");
                         System.out.println(op.getDurationClause());
                         //     if (op.getDurationClause() != null) {
                         expList.add(op.getDurationClause());
@@ -8617,7 +8619,7 @@ public class Verifier extends ResolveConceptualVisitor {
                     Cum_Dur.setMathType(myTypeGraph.R);
                 }
             }
-            System.out.println("\n 8596  Cum_Dur: \t" + Cum_Dur.toString());
+            System.out.println("\n 8617  Cum_Dur: \t" + Cum_Dur.toString());
 
             // ys - code for retrieving duration for Do_Nothing goes here.
             Exp procDur = null;
@@ -8711,6 +8713,8 @@ public class Verifier extends ResolveConceptualVisitor {
             }
             // --NY
             else if (dec instanceof PerformanceOperationDec) {
+                System.out
+                        .println("visitProcedures -> PerformanceOperationDec");
                 visitPerformanceOperationDec((PerformanceOperationDec) dec);
             }
             // --NY
