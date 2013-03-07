@@ -635,16 +635,6 @@ public class Populator extends TreeWalkerVisitor {
     @Override
     public void postOperationDec(OperationDec dec) {
         myBuilder.endScope();
-
-        try {
-            myBuilder.getInnermostActiveScope().addOperationProfile(
-                    dec.getName().getName(), dec, myCorrespondingOperation);
-        }
-        catch (DuplicateSymbolException dse) {
-            duplicateSymbol(dec.getName().getName(), dec.getName()
-                    .getLocation());
-        }
-
         myCurrentParameters = null;
     }
 
@@ -667,6 +657,10 @@ public class Populator extends TreeWalkerVisitor {
             myBuilder.getInnermostActiveScope().addOperation(
                     dec.getName().getName(), dec, myCurrentParameters,
                     returnType);
+
+            myBuilder.getScope(myCorrespondingOperation.getDefiningElement())
+                    .addOperationProfile(dec.getName().getName(), dec,
+                            myCorrespondingOperation);
         }
         catch (DuplicateSymbolException dse) {
             duplicateSymbol(dec.getName().getName(), dec.getName()
