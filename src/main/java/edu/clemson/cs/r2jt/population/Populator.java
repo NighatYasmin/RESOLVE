@@ -16,7 +16,6 @@ import edu.clemson.cs.r2jt.typeandpopulate.MathSymbolTable.FacilityStrategy;
 import edu.clemson.cs.r2jt.typeandpopulate.MathSymbolTable.ImportStrategy;
 import edu.clemson.cs.r2jt.typeandpopulate.MathSymbolTableBuilder;
 import edu.clemson.cs.r2jt.typeandpopulate.ModuleIdentifier;
-import edu.clemson.cs.r2jt.typeandpopulate.ModuleScope;
 import edu.clemson.cs.r2jt.typeandpopulate.ModuleScopeBuilder;
 import edu.clemson.cs.r2jt.typeandpopulate.NoSolutionException;
 import edu.clemson.cs.r2jt.typeandpopulate.NoSuchSymbolException;
@@ -574,10 +573,10 @@ public class Populator extends TreeWalkerVisitor {
             myCurrentParameters = new LinkedList<ProgramParameterEntry>();
         }
         catch (NoSuchSymbolException nsse) {
-            throw new SourceErrorException("Procedure "
+            throw new SourceErrorException("Performance Operation "
                     + dec.getName().getName()
-                    + " does not implement any known operation.", dec.getName()
-                    .getLocation());
+                    + " does not provide profile for any known operation.", dec
+                    .getName().getLocation());
         }
         catch (DuplicateSymbolException dse) {
             //We should have caught this before now, like when we defined the
@@ -645,19 +644,6 @@ public class Populator extends TreeWalkerVisitor {
         myBuilder.endScope();
 
         try {
-            Ty returnTy = dec.getReturnTy();
-            PTType returnType;
-            if (returnTy == null) {
-                returnType = PTVoid.getInstance(myTypeGraph);
-            }
-            else {
-                returnType = returnTy.getProgramTypeValue();
-            }
-
-            myBuilder.getInnermostActiveScope().addOperation(
-                    dec.getName().getName(), dec, myCurrentParameters,
-                    returnType);
-
             myBuilder.getScope(myCorrespondingOperation.getDefiningElement())
                     .addOperationProfile(dec.getName().getName(), dec,
                             myCorrespondingOperation);
