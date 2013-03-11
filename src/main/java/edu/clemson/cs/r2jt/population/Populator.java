@@ -227,24 +227,23 @@ public class Populator extends TreeWalkerVisitor {
         }
     }
 
-    /*
-     // hampton
-     @Override
-     public void prePerformanceCModuleDec(PerformanceCModuleDec performanceModule) {
-     myCurModuleScope.addImport(new ModuleIdentifier(performanceModule
-     .getProfilecName().getName()));
-     }
+    // hampton
+    @Override
+    public void prePerformanceCModuleDec(PerformanceCModuleDec performanceModule) {
+        myCurModuleScope.addImport(new ModuleIdentifier(performanceModule
+                .getProfilecName().getName()));
+    }
 
-     // hampton
-     @Override
-     public void prePerformanceEModuleDec(PerformanceEModuleDec performanceModule) {
-     myCurModuleScope.addImport(new ModuleIdentifier(performanceModule
-     .getProfilecName().getName()));
-     myCurModuleScope.addImport(new ModuleIdentifier(performanceModule
-     .getProfilecpName().getName()));
-     myCurModuleScope.addImport(new ModuleIdentifier(performanceModule
-     .getProfileName3().getName()));
-     }*/
+    // hampton
+    @Override
+    public void prePerformanceEModuleDec(PerformanceEModuleDec performanceModule) {
+        myCurModuleScope.addImport(new ModuleIdentifier(performanceModule
+                .getProfilecName().getName()));
+        myCurModuleScope.addImport(new ModuleIdentifier(performanceModule
+                .getProfilecpName().getName()));
+        myCurModuleScope.addImport(new ModuleIdentifier(performanceModule
+                .getProfileName3().getName()));
+    }
 
     @Override
     public void postUsesItem(UsesItem uses) {
