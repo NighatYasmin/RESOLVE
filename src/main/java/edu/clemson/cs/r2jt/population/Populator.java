@@ -206,6 +206,7 @@ public class Populator extends TreeWalkerVisitor {
                 .getConceptName().getName()));
     }
 
+    // ys (edits)
     @Override
     public void preEnhancementBodyModuleDec(
             EnhancementBodyModuleDec enhancementRealization) {
@@ -216,7 +217,34 @@ public class Populator extends TreeWalkerVisitor {
                 .getConceptName().getName()));
         myCurModuleScope.addImport(new ModuleIdentifier(enhancementRealization
                 .getEnhancementName().getName()));
+
+        //Enhancement realizations implicitly import the performance profiles
+        //if they are specified.
+        PosSymbol profileName = enhancementRealization.getProfileName();
+        if (profileName != null) {
+            myCurModuleScope.addImport(new ModuleIdentifier(profileName
+                    .getName()));
+        }
     }
+
+    /*
+     // hampton
+     @Override
+     public void prePerformanceCModuleDec(PerformanceCModuleDec performanceModule) {
+     myCurModuleScope.addImport(new ModuleIdentifier(performanceModule
+     .getProfilecName().getName()));
+     }
+
+     // hampton
+     @Override
+     public void prePerformanceEModuleDec(PerformanceEModuleDec performanceModule) {
+     myCurModuleScope.addImport(new ModuleIdentifier(performanceModule
+     .getProfilecName().getName()));
+     myCurModuleScope.addImport(new ModuleIdentifier(performanceModule
+     .getProfilecpName().getName()));
+     myCurModuleScope.addImport(new ModuleIdentifier(performanceModule
+     .getProfileName3().getName()));
+     }*/
 
     @Override
     public void postUsesItem(UsesItem uses) {
@@ -525,8 +553,66 @@ public class Populator extends TreeWalkerVisitor {
         myCurrentParameters = new LinkedList<ProgramParameterEntry>();
     }
 
+    // hampton
+    // ys
+    @Override
+    public void prePerformanceOperationDec(PerformanceOperationDec dec) {
+
+        try {
+            //Figure out what Operation we correspond to (we don't use 
+            //OperationQuery because we want to check parameter types 
+            //separately in postProcedureDec)
+            myCorrespondingOperation =
+                    myBuilder.getInnermostActiveScope().queryForOne(
+                            new NameAndEntryTypeQuery(null, dec.getName(),
+                                    OperationEntry.class,
+                                    ImportStrategy.IMPORT_NAMED,
+                                    FacilityStrategy.FACILITY_IGNORE, false))
+                            .toOperationEntry(dec.getLocation());
+
+            myBuilder.startScope(dec);
+
+            myCurrentParameters = new LinkedList<ProgramParameterEntry>();
+        }
+        catch (NoSuchSymbolException nsse) {
+            throw new SourceErrorException("Procedure "
+                    + dec.getName().getName()
+                    + " does not implement any known operation.", dec.getName()
+                    .getLocation());
+        }
+        catch (DuplicateSymbolException dse) {
+            //We should have caught this before now, like when we defined the
+            //duplicate Operation
+            throw new RuntimeException("Duplicate Operations for "
+                    + dec.getName().getName() + "?");
+        }
+    }
+
     @Override
     public void midOperationDec(OperationDec node,
+            ResolveConceptualElement prevChild,
+            ResolveConceptualElement nextChild) {
+
+        if (prevChild == node.getReturnTy() && node.getReturnTy() != null) {
+            try {
+                //Inside the operation's assertions, the name of the operation
+                //refers to its return value
+                myBuilder.getInnermostActiveScope().addBinding(
+                        node.getName().getName(), node,
+                        node.getReturnTy().getMathTypeValue());
+            }
+            catch (DuplicateSymbolException dse) {
+                //This shouldn't be possible--the operation declaration has a 
+                //scope all its own and we're the first ones to get to
+                //introduce anything
+                throw new RuntimeException(dse);
+            }
+        }
+    }
+
+    // hampton
+    @Override
+    public void midPerformanceOperationDec(PerformanceOperationDec node,
             ResolveConceptualElement prevChild,
             ResolveConceptualElement nextChild) {
 
@@ -564,6 +650,24 @@ public class Populator extends TreeWalkerVisitor {
             myBuilder.getInnermostActiveScope().addOperation(
                     dec.getName().getName(), dec, myCurrentParameters,
                     returnType);
+        }
+        catch (DuplicateSymbolException dse) {
+            duplicateSymbol(dec.getName().getName(), dec.getName()
+                    .getLocation());
+        }
+
+        myCurrentParameters = null;
+    }
+
+    // hampton
+    // ny, ys
+    @Override
+    public void postPerformanceOperationDec(PerformanceOperationDec dec) {
+        myBuilder.endScope();
+
+        try {
+            myBuilder.getInnermostActiveScope().addOperationProfile(
+                    dec.getName().getName(), dec, myCorrespondingOperation);
         }
         catch (DuplicateSymbolException dse) {
             duplicateSymbol(dec.getName().getName(), dec.getName()
@@ -1383,6 +1487,56 @@ public class Populator extends TreeWalkerVisitor {
                     .getLocation());
         }
 
+        myBuilder.endScope();
+    }
+
+    // hampton
+    @Override
+    public void prePerformanceTypeDec(PerformanceTypeDec node) {
+        myBuilder.startScope(node);
+
+        try {
+            ProgramTypeEntry correspondingTypeDeclaration =
+                    myBuilder.getInnermostActiveScope().queryForOne(
+                            new NameAndEntryTypeQuery(null, node.getName(),
+                                    ProgramTypeEntry.class,
+                                    ImportStrategy.IMPORT_NAMED,
+                                    FacilityStrategy.FACILITY_IGNORE, false))
+                            .toProgramTypeEntry(null);
+
+            TypeDec dec =
+                    (TypeDec) correspondingTypeDeclaration.getDefiningElement();
+
+            PosSymbol exemplar = dec.getExemplar();
+
+            if (exemplar != null) {
+                try {
+                    myBuilder.getInnermostActiveScope().addBinding(
+                            exemplar.getName(), dec,
+                            dec.getModel().getMathTypeValue());
+                }
+                catch (DuplicateSymbolException dse) {
+                    //This shouldn't be possible--the type declaration has a 
+                    //scope all its own and we're the first ones to get to
+                    //introduce anything
+                    throw new RuntimeException(dse);
+                }
+            }
+        }
+        catch (DuplicateSymbolException dse) {
+            throw new SourceErrorException("Multiple types named "
+                    + node.getName() + ".", node.getName().getLocation());
+        }
+        catch (NoSuchSymbolException nsse) {
+            throw new SourceErrorException(
+                    "No corresponding type definition for \"" + node.getName()
+                            + "\".", node.getName().getLocation());
+        }
+    }
+
+    // hampton
+    @Override
+    public void postPerformanceTypeDec(PerformanceTypeDec node) {
         myBuilder.endScope();
     }
 

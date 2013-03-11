@@ -65,8 +65,9 @@ public class AddsSomethingNewPredicate implements Predicate<ProofStep> {
                                     .getSymbolNames());
                         }
 
-                        Set<String> introduced = new HashSet<String>(
-                                transformation.getReplacementSymbolNames());
+                        Set<String> introduced =
+                                new HashSet<String>(transformation
+                                        .getReplacementSymbolNames());
 
                         introduced.removeAll(originalSymbolNames);
 

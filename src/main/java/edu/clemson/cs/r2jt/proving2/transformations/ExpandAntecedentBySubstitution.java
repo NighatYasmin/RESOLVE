@@ -76,8 +76,9 @@ public class ExpandAntecedentBySubstitution implements Transformation {
 
     @Override
     public boolean introducesQuantifiedVariables() {
-        Set<PSymbol> introduced = new HashSet<PSymbol>(
-                myTransformationTemplate.getQuantifiedVariables());
+        Set<PSymbol> introduced =
+                new HashSet<PSymbol>(myTransformationTemplate
+                        .getQuantifiedVariables());
         introduced.removeAll(myMatchPattern.getQuantifiedVariables());
 
         return !introduced.isEmpty();

@@ -542,8 +542,8 @@ public abstract class PExp {
     public final Set<String> getSymbolNames() {
         if (myCachedSymbolNames == null) {
             //We're immutable, so only do this once
-            myCachedSymbolNames = Collections.unmodifiableSet(
-                    getSymbolNamesNoCache());
+            myCachedSymbolNames =
+                    Collections.unmodifiableSet(getSymbolNamesNoCache());
         }
 
         return myCachedSymbolNames;
@@ -554,8 +554,9 @@ public abstract class PExp {
     public final Set<PSymbol> getQuantifiedVariables() {
         if (myCachedQuantifiedVariables == null) {
             //We're immutable, so only do this once
-            myCachedQuantifiedVariables = Collections.unmodifiableSet(
-                    getQuantifiedVariablesNoCache());
+            myCachedQuantifiedVariables =
+                    Collections
+                            .unmodifiableSet(getQuantifiedVariablesNoCache());
         }
 
         return myCachedQuantifiedVariables;

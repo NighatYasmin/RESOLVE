@@ -44,6 +44,7 @@
  * Ben Markle
  * Kim Roche
  * Murali Sitaraman
+ * Nighat Yasmin
  */
 /*
  * Verifier.java
@@ -86,6 +87,22 @@ import edu.clemson.cs.r2jt.analysis.TypeResolutionException;
 import edu.clemson.cs.r2jt.analysis.ProgramExpTypeResolver;
 import edu.clemson.cs.r2jt.errors.ErrorHandler;
 import edu.clemson.cs.r2jt.typeandpopulate.MathSymbolTableBuilder;
+import edu.clemson.cs.r2jt.typeandpopulate.DuplicateSymbolException;
+import edu.clemson.cs.r2jt.typeandpopulate.MathSymbolTableBuilder;
+import edu.clemson.cs.r2jt.typeandpopulate.ModuleIdentifier;
+import edu.clemson.cs.r2jt.typeandpopulate.ModuleScopeBuilder;
+import edu.clemson.cs.r2jt.typeandpopulate.NoSuchSymbolException;
+import edu.clemson.cs.r2jt.typeandpopulate.ScopeBuilder;
+import edu.clemson.cs.r2jt.typeandpopulate.entry.OperationProfileEntry;
+import edu.clemson.cs.r2jt.typeandpopulate.entry.ProcedureEntry;
+import edu.clemson.cs.r2jt.typeandpopulate.entry.SymbolTableEntry;
+import edu.clemson.cs.r2jt.typeandpopulate.programtypes.PTType;
+import edu.clemson.cs.r2jt.typeandpopulate.query.NameQuery;
+import edu.clemson.cs.r2jt.typeandpopulate.query.OperationProfileQuery;
+import edu.clemson.cs.r2jt.typeandpopulate.query.OperationQuery;
+import edu.clemson.cs.r2jt.utilities.SourceErrorException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Verifier extends ResolveConceptualVisitor {
 
@@ -114,6 +131,17 @@ public class Verifier extends ResolveConceptualVisitor {
 
     private boolean isInInterface = false;
 
+    // NY This expression holds the duration
+    private Exp Cum_Dur = null;
+    private Exp Upper_Bnd_Dur = null;
+    private PosSymbol Profile_Name = null;
+    private PosSymbol Profile_CName = null;
+    private PosSymbol Profile_CPName = null;
+    private ModuleID Profile_EID = null;
+    private ModuleID Profile_CP_ID = null;
+    private PerformanceEModuleDec pEDec = null;
+    private PerformanceCModuleDec pCPDec = null;
+
     // This buffer holds the verbose data
     private StringBuffer VCBuffer;
 
@@ -139,6 +167,9 @@ public class Verifier extends ResolveConceptualVisitor {
 
     private static final String FLAG_DESC_VERIFY_VC = "Generate VCs.";
 
+    // --ny
+    private static final String FLAG_DESC_PERF_VC = "Generate performance VCs.";
+
     private static final String FLAG_DESC_FINALVERB_VC =
             "Show Final VCs in Old 'Verbose' Format.";
 
@@ -149,6 +180,13 @@ public class Verifier extends ResolveConceptualVisitor {
      */
     public static final Flag FLAG_VERBOSE_VC =
             new Flag(FLAG_SECTION_NAME, "verbose", FLAG_DESC_VERBOSE_VC);
+
+    /**
+     * --ny <p></p>
+     */
+    public static final Flag FLAG_PERF_VC =
+    //		new Flag(FLAG_SECTION_NAME, "perf", FLAG_DESC_PERF_VC);
+            new Flag(FLAG_SECTION_NAME, "PVCs", FLAG_DESC_PERF_VC);
 
     /**
      * <p></p>
@@ -220,6 +258,10 @@ public class Verifier extends ResolveConceptualVisitor {
         FlagDependencies.addRequires(FLAG_ISABELLE_VC, FLAG_VERIFY_VC);
         FlagDependencies.addRequires(FLAG_SIMPLIFY_VC, FLAG_VERIFY_VC);
         FlagDependencies.addRequires(FLAG_LISTVCS_VC, FLAG_VERIFY_VC);
+        // --ny
+        //FlagDependencies.addRequires(FLAG_PERF_VC, FLAG_VERIFY_VC);				
+        FlagDependencies.addImplies(Verifier.FLAG_PERF_VC,
+                Verifier.FLAG_VERIFY_VC);
 
     }
 
@@ -601,6 +643,26 @@ public class Verifier extends ResolveConceptualVisitor {
         /* Get Ensures Clause - Set to "true" if nonexistent*/
         if (opDec != null) {
             Exp ens = (Exp) (((OperationDec) opDec).getEnsures());
+
+            // --ny
+            if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)
+                    && (pEDec != null || pCPDec != null)) {
+
+                Iterator<Dec> i = (pCPDec.getDecs()).iterator();
+                while (i.hasNext()) {
+                    Dec dec = i.next();
+                    if (dec instanceof PerformanceOperationDec) {
+                        if (opDec.getName().toString() == dec.getName()
+                                .toString()) {
+                            visitPerformanceOperationDec((PerformanceOperationDec) dec);
+                            //  	_Cum_Dur = dec.getDuration();
+                            System.out.println("Cum_Dur:  "
+                                    + Cum_Dur.toString());
+                        }
+                    }
+                }
+            }
+
             if (ens != null)
                 ensures = (Exp) Exp.clone(ens);
             else
@@ -620,6 +682,21 @@ public class Verifier extends ResolveConceptualVisitor {
             if (ensures.getLocation() != null)
                 ensures.getLocation().setDetails(
                         "Ensures Clause For " + opDec.getName());
+            // --ny
+            if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)
+                    && pCPDec != null) {
+
+                Iterator<Dec> i = (pCPDec.getDecs()).iterator();
+                while (i.hasNext()) {
+                    Dec dec = i.next();
+                    if (dec instanceof PerformanceOperationDec) {
+                        visitPerformanceOperationDec((PerformanceOperationDec) dec);
+                        //  	Cum_Dur = dec.getDuration();
+                        System.out.println("Cum_Dur:  " + Cum_Dur);
+
+                    }
+                }
+            }
 
         }
         else {
@@ -733,12 +810,37 @@ public class Verifier extends ResolveConceptualVisitor {
             assertion.addConfirm(requires);
         }
         if (ensures != null) {
+            String operName; // --ny
             if (stmt.getName().getLocation() != null) {
                 Location loc = (Location) stmt.getName().getLocation().clone();
+
+                operName = opDec.getName().toString(); // --ny
+                // --ny 
+                if (myInstanceEnvironment.flags
+                        .isFlagSet(Verifier.FLAG_PERF_VC)
+                        && (pEDec != null || pCPDec != null)) {
+
+                    Iterator<Dec> i = (pCPDec.getDecs()).iterator();
+                    PerformanceOperationDec pDec = null;
+
+                    while (i.hasNext()) {
+                        Dec dec = i.next();
+                        if (dec instanceof PerformanceOperationDec) {
+                            if (dec.getName().getSymbol().toString() == operName) {
+                                pDec = (PerformanceOperationDec) dec;
+                                visitPerformanceOperationDec((PerformanceOperationDec) dec);
+                                Cum_Dur = pDec.getDuration();
+                            }
+                            System.out.println("Cum_Dur:  " + Cum_Dur);
+                        }
+                    }
+                }
+
                 loc.setDetails("Ensures Clause of " + opDec.getName());
                 setLocation(ensures, loc);
             }
-            assertion.addAssume(ensures);
+
+            //            assertion.addAssume(ensures);
         }
 
         assertion.setFinalConfirm(conf);
@@ -2140,6 +2242,29 @@ public class Verifier extends ResolveConceptualVisitor {
 
         if (opDec != null) {
             if (opDec.getEnsures() != null) {
+                String operName; // --ny
+                operName = opDec.getName().toString(); // --ny
+                // --ny 
+                if (myInstanceEnvironment.flags
+                        .isFlagSet(Verifier.FLAG_PERF_VC)
+                        && pCPDec != null) {
+
+                    Iterator<Dec> i = (pCPDec.getDecs()).iterator();
+                    PerformanceOperationDec pDec = null;
+
+                    while (i.hasNext()) {
+                        Dec dec = i.next();
+                        if (dec instanceof PerformanceOperationDec) {
+                            if (dec.getName().getSymbol().toString() == operName) {
+                                pDec = (PerformanceOperationDec) dec;
+                                visitPerformanceOperationDec((PerformanceOperationDec) dec);
+                                Cum_Dur = pDec.getDuration();
+                            }
+                            System.out.println("Cum_Dur:  2171" + Cum_Dur);
+                        }
+                    }
+                }
+
                 ensures = (Exp) Exp.clone(((OperationDec) opDec).getEnsures());
             }
         }
@@ -2403,6 +2528,40 @@ public class Verifier extends ResolveConceptualVisitor {
         }
         return curOperation;
 
+    }
+
+    //NY
+    public PerformanceOperationDec formPerfOpDec(PerformanceOperationDec dec) {
+
+        PerformanceOperationDec curOperation = new PerformanceOperationDec();
+
+        if (dec.getName() != null) {
+            curOperation.setName(dec.getName());
+        }
+        if (!(dec.getParameters().isEmpty())) {
+            curOperation.setParameters(dec.getParameters());
+        }
+        if (dec.getReturnTy() != null) {
+            curOperation.setParameters(dec.getParameters());
+
+        }
+        if (dec.getStateVars() != null) {
+            curOperation.setParameters(dec.getParameters());
+
+        }
+        if (dec.getRequires() != null) {
+            curOperation.setRequires((Exp) (dec.getRequires().clone()));
+
+        }
+        if (dec.getEnsures() != null) {
+            curOperation.setEnsures((Exp) (dec.getEnsures().clone()));
+
+        }
+        if (dec.getDuration() != null) {
+            curOperation.setDuration((Exp) (dec.getDuration().clone()));
+
+        }
+        return curOperation;
     }
 
     private void generateVCsForOperationParameter(FacilityDec dec,
@@ -5195,6 +5354,24 @@ public class Verifier extends ResolveConceptualVisitor {
         return typeParms;
     }
 
+    // --ny
+    private List<String> getPerfTypeParms(ModuleID cid) {
+        List<String> typeParms = new List<String>();
+        PerformanceEModuleDec pDec =
+                (PerformanceEModuleDec) myInstanceEnvironment.getModuleDec(cid);
+        List<ModuleParameterDec> mpList = pDec.getParameters();
+        Iterator<ModuleParameterDec> mpIt = mpList.iterator();
+        Dec mp = null;
+        while (mpIt.hasNext()) {
+            mp = mpIt.next().getWrappedDec();
+            if (mp instanceof ConceptTypeParamDec) {
+                typeParms.addUnique(((ConceptTypeParamDec) mp).getName()
+                        .toString());
+            }
+        }
+        return typeParms;
+    }
+
     // Get the PosSymbol associated with the VariableExp left 
     private PosSymbol getVarName(VariableExp left) {
         PosSymbol name;
@@ -7229,12 +7406,31 @@ public class Verifier extends ResolveConceptualVisitor {
         EnhancementModuleDec eDec =
                 (EnhancementModuleDec) myInstanceEnvironment.getModuleDec(eid);
 
+        List<UsesItem> list = eDec.getUsesItems();
+        list.addAll(dec.getUsesItems());
+
         VCBuffer.append("Enhancement Name: ");
         VCBuffer.append(eDec.getName().toString());
         VCBuffer.append("\n");
+        /* NY */
+        if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
+            Profile_EID = ModuleID.createPerformanceID(dec.getProfileName());
 
-        List<UsesItem> list = eDec.getUsesItems();
-        list.addAll(dec.getUsesItems());
+            PerformanceEModuleDec pEDec =
+                    (PerformanceEModuleDec) myInstanceEnvironment
+                            .getModuleDec(Profile_EID);
+
+            visitPerformance_Related_Names(pEDec, list);
+
+            visitPerformanceEModuleDec(pEDec);
+            list.addAll(pEDec.getUsesItems());
+
+            if (Profile_CName != null && pCPDec != null) {
+                visitPerformanceCModuleDec(pCPDec);
+                list.addAll(pCPDec.getUsesItems());
+            }
+        }
+
         ConceptModuleDec cDec =
                 (ConceptModuleDec) myInstanceEnvironment.getModuleDec(cid);
 
@@ -7830,6 +8026,14 @@ public class Verifier extends ResolveConceptualVisitor {
             assertion.addAssume(recurs);
         }
 
+        /* **********************Murali: Cum_Dur test************************* */
+
+        if (dec.getDecreasing() != null) {
+            Verifier_Performance VerifierPerf =
+                    new Verifier_Performance(assertion, dec, table);
+            assertion = VerifierPerf.VerifierPerfProcedureDec();
+        }
+
         /* Add Statements to Assertive Code */
         assertion.addStatements(dec.getStatements());
 
@@ -8282,6 +8486,14 @@ public class Verifier extends ResolveConceptualVisitor {
         if (loc != null) {
             loc.setDetails("Ensures Clause of " + dec.getName());
             setLocation(ensures, loc);
+
+            // --ny
+            if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
+                PerformanceEModuleDec pDec =
+                        (PerformanceEModuleDec) myInstanceEnvironment
+                                .getModuleDec(Profile_EID);
+                visitProcedures(pDec.getDecs());
+            }
         }
 
         if (correspondence != null && (!(correspondence instanceof EqualsExp)))
@@ -8339,6 +8551,131 @@ public class Verifier extends ResolveConceptualVisitor {
             assertion.setFinalConfirm(ensures);
         }
 
+        /* ys - adding code for performance */
+        if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
+            // get iterator on list of statements
+            Iterator<Statement> itStatement = dec.getStatements().iterator();
+
+            // ny
+            List<Exp> expList = new List<Exp>();
+
+            // loop
+            while (itStatement.hasNext()) {
+                Statement curStatement = itStatement.next();
+
+                // Check for a callstmt
+                if (curStatement instanceof CallStmt) {
+                    CallStmt curCallStmt = ((CallStmt) curStatement);
+                    List<ProgramExp> args = curCallStmt.getArguments();
+
+                    // form a list of PTType from ProgramExp
+                    java.util.List<PTType> argTypes = new LinkedList<PTType>();
+                    for (ProgramExp arg : args) {
+                        argTypes.add(arg.getProgramType());
+                    }
+
+                    try {
+                        // search for the operation profile in the symbol table
+                        OperationProfileEntry op =
+                                myRealSymbolTable.getScope(dec)
+                                        .queryForOne(
+                                                new OperationProfileQuery(null,
+                                                        curCallStmt.getName(),
+                                                        argTypes));
+                        System.out.print("Verifier: Line 8583 - ");
+                        System.out.println(op.getDurationClause());
+                        //     if (op.getDurationClause() != null) {
+                        expList.add(op.getDurationClause());
+                        //      } // ny
+                    }
+                    catch (NoSuchSymbolException nsse) {
+                        noSuchSymbol(null, curCallStmt.getName().getName(),
+                                curCallStmt.getLocation());
+                    }
+                    catch (DuplicateSymbolException dse) {
+                        //This should be caught earlier, when the duplicate operation is
+                        //created
+                        throw new RuntimeException(dse);
+                    }
+                }
+            }
+
+            // ny - code to combine the duration Exp
+            Cum_Dur = null;
+            PosSymbol opNameAdd_itDur = createPosSymbol("+");
+            Iterator<Exp> itDur = expList.iterator();
+            while (itDur.hasNext()) {
+                Exp tmp = itDur.next();
+                if (Cum_Dur == null) {
+                    Cum_Dur = tmp;
+                }
+                else {
+                    Cum_Dur =
+                            new InfixExp(Cum_Dur.getLocation(), Cum_Dur,
+                                    opNameAdd_itDur, tmp);
+                    Cum_Dur.setMathType(myTypeGraph.R);
+                }
+            }
+            System.out.println("\n 8617  Cum_Dur: \t" + Cum_Dur.toString());
+
+            // ys - code for retrieving duration for Do_Nothing goes here.
+            Exp procDur = null;
+            if (moduleDec instanceof EnhancementBodyModuleDec) {
+                // Type cast to EnhancementBodyModuleDec
+                EnhancementBodyModuleDec ebmd =
+                        (EnhancementBodyModuleDec) moduleDec;
+
+                // Retrieve the scope repository containing all the scopes
+                ScopeRepository sr =
+                        myRealSymbolTable.getScope(ebmd).getSourceRepository();
+                try {
+                    // Retrieve the scope identifier for the performance
+                    // profiles.
+                    ModuleIdentifier mi =
+                            sr.getModuleScope(
+                                    new ModuleIdentifier(ebmd.getProfileName()
+                                            .getName())).getModuleIdentifier();
+
+                    // Retrieve the scope with the module identifier specified.
+                    ModuleScopeBuilder msb =
+                            myRealSymbolTable.getModuleScope(mi);
+
+                    // Retrieve the OperationProfileEntry for this ProcedureDec
+                    try {
+                        OperationProfileEntry ope =
+                                ((OperationProfileEntry) msb
+                                        .queryForOne(new NameQuery(null, dec
+                                                .getName())));
+                        procDur = ope.getDurationClause();
+                    }
+                    catch (NoSuchSymbolException nsse) {
+                        noSuchSymbol(null, dec.getName().getName(), dec
+                                .getLocation());
+                    }
+                    catch (DuplicateSymbolException dse) {
+                        //This should be caught earlier, when the duplicate operation is
+                        //created
+                        throw new RuntimeException(dse);
+                    }
+
+                }
+                catch (NoSuchSymbolException ex) {
+                    noSuchSymbol(null, ebmd.getProfileName().getName(), ebmd
+                            .getLocation());
+                }
+            }
+
+            // ny, ys - add VC to assertive code
+            if (procDur != null && Cum_Dur != null) {
+                PosSymbol lessEq = createPosSymbol("<=");
+                Exp duration =
+                        new InfixExp(dec.getLocation(), Cum_Dur, lessEq,
+                                procDur);
+                duration.setMathType(myTypeGraph.R);
+                assertion.addConfirm(duration);
+            }
+        }
+
         VCBuffer.append("\n Procedure Name:\t");
         VCBuffer.append(dec.getName().getSymbol().toString());
         VCBuffer.append("\n");
@@ -8370,6 +8707,20 @@ public class Verifier extends ResolveConceptualVisitor {
             }
             else if (dec instanceof FacilityDec) {
                 visitFacilityDec((FacilityDec) dec);
+            }
+            // --NY
+            else if (dec instanceof PerformanceOperationDec) {
+                System.out
+                        .println("visitProcedures -> PerformanceOperationDec");
+                visitPerformanceOperationDec((PerformanceOperationDec) dec);
+            }
+            // --NY
+            else if (dec instanceof PerformanceEModuleDec) {
+                System.out.println("visitProcedures -> PerformanceEModuleDec");
+            }
+            // --NY
+            else if (dec instanceof PerformanceCModuleDec) {
+                System.out.println("visitProcedures -> PerformanceCModuleDec");
             }
         }
     }
@@ -8730,5 +9081,190 @@ public class Verifier extends ResolveConceptualVisitor {
                 importList.addUnique(importStr);
             }
         }
+    }
+
+    // --NY added for Performance
+    public void visitPerformance_Related_Names(PerformanceEModuleDec dec1,
+            List<UsesItem> list) {
+
+        Profile_Name = dec1.getName();
+        VCBuffer.append("Profile Name:\t");
+        VCBuffer.append(Profile_Name.toString());
+        VCBuffer.append("\n");
+
+        // YS - Check to see if we have the profile's concept name and its
+        //      associated profile.
+        if (dec1.getProfilecName() != null) {
+            Profile_CName = dec1.getProfilecName();
+            VCBuffer.append("Profile's Concept Name:\t");
+            VCBuffer.append(Profile_CName.toString());
+            VCBuffer.append("\n");
+
+            Profile_CPName = dec1.getProfilecpName();
+            VCBuffer.append("Profile Concept's Profile Name:\t");
+            VCBuffer.append(Profile_CPName.toString());
+            VCBuffer.append("\n");
+
+            if (Profile_CPName != null) {
+                Profile_CP_ID = ModuleID.createPerformanceID(Profile_CPName);
+                PerformanceCModuleDec pCPDec =
+                        (PerformanceCModuleDec) myInstanceEnvironment
+                                .getModuleDec(Profile_CP_ID);
+                list.addAll(pCPDec.getUsesItems());
+            }
+
+            VCBuffer.append("Performance Operation Name: Need to be fixed\t");
+            VCBuffer.append(dec1.getName().toString());
+            VCBuffer.append("\n");
+        }
+    }
+
+    // --NY   added for Performance
+    public void visitPerformanceCModuleDec(PerformanceCModuleDec dec1) {
+        table.beginModuleScope();
+        System.out.println("visitPerformanceCModuleDec");
+        System.out.println(dec1.getName().getName());
+        visitProcedures(dec1.getDecs());
+        table.endModuleScope();
+    }
+
+    // --NY   added for Performance
+    public void visitPerformanceEModuleDec(PerformanceEModuleDec dec1) {
+        table.beginModuleScope();
+        System.out.println("visitPerformanceEModuleDec");
+        System.out.println(dec1.getName().getName());
+
+        // YS - Check to see if we have concept performance profile or a enhancement performance profile
+        ModuleID cid;
+        if (dec1.getProfilecpName() == null) {
+            dec1.setProfilecName(dec1.getProfileName3());
+            cid =
+                    ModuleID.createProfileID(dec1.getProfileName1(), dec1
+                            .getProfileName2(), new PosSymbol(), dec1
+                            .getProfilecName(), new PosSymbol());
+        }
+        else {
+            cid =
+                    ModuleID.createProfileID(dec1.getProfileName1(), dec1
+                            .getProfileName2(), dec1.getProfileName3(), dec1
+                            .getProfilecName(), dec1.getProfilecpName());
+        }
+
+        typeParms = getPerfTypeParms(cid);
+        //   concParms = getConcParms(cid);
+
+        //--NY
+        //       visitPerformanceInitItem(dec1.getPerfInit());
+        //        visitPerformanceFinalItem(dec1.getPerfFinal());
+
+        visitProcedures(dec1.getDecs());
+
+        table.endModuleScope();
+    }
+
+    // --NY added for Performance
+    public void visitPerformanceInitItem(PerformanceInitItem item) {
+        if (item != null) {
+            System.out.println("Perf_Initialization: "
+                    + item.getDuration().toString());
+        }
+        else {
+            System.out.println("Perf_Initialization: is null");
+        }
+    }
+
+    // --NY added for Performance
+    public void visitPerformanceFinalItem(PerformanceFinalItem item) {
+        if (item != null) {
+            System.out.println("Perf_Finalization: "
+                    + item.getDuration().toString());
+        }
+        else {
+            System.out.println("Perf_Finalization: is null");
+        }
+    }
+
+    // --NY added for Performance
+    public void visitPerformanceOperationDec(PerformanceOperationDec dec) {
+        Exp tmp = null;
+
+        AssertiveCode assertion = new AssertiveCode(myInstanceEnvironment);
+        //       table.beginPerformanceOperationScope();
+        //       table.beginPerformanceProcedureScope();
+        //       table.bindPerformanceProcedureTypeNames();
+
+        System.out.println("\n PerformanceOperation Name:\t");
+        System.out.println(dec.getName().getSymbol().toString());
+        System.out.println(dec.getDuration().toString());
+
+        //    	VCBuffer.append("\n_____________________ \n");
+        //    	VCBuffer.append("\nProcedure Declaration Rule Applied: \n\n");
+        //    	VCBuffer.append(assertion.assertionToString());
+
+        if (pEDec != null) {
+            System.out.println("\n pEDec: \t" + pEDec.toString());
+        }
+
+        if (pCPDec != null) {
+            System.out.println("\n pCPDec: \t" + pCPDec.toString());
+        }
+
+        if (Cum_Dur == null) {
+            Cum_Dur = dec.getDuration();
+            Upper_Bnd_Dur = dec.getDuration();
+        }
+
+        else if (Cum_Dur != null) {
+
+            tmp = dec.getDuration();
+
+            PosSymbol opNameAdd = createPosSymbol("+");
+            PosSymbol opNameLE = createPosSymbol("<=");
+
+            Cum_Dur =
+                    new InfixExp(Cum_Dur.getLocation(), Cum_Dur, opNameAdd, tmp);
+            InfixExp UBD =
+                    new InfixExp(Cum_Dur.getLocation(), Cum_Dur, opNameLE,
+                            Upper_Bnd_Dur);
+
+            System.out.println("\n UBD: \t" + UBD.toString());
+
+            assertion.addAssume(Cum_Dur);
+            //           assertion.addConfirm(_Cum_Dur);
+            //          VCBuffer.append(assertion.assertionToString());
+            //        VCBuffer.append(_Cum_Dur.toString());
+
+        }
+        // construct Exp for confirm statement for duration
+        // add that Exp to the assertions
+        // See 7520
+        // something like assertion.addConfirm(durationExp);
+
+        // if there is ensures clause, need to add it
+        //if(ensures != null){
+        //assertion.setFinalConfirm(ensures);
+        //}
+
+        /* Applies Proof Rules */
+        //    applyEBRules(assertion);
+        //     VCBuffer.append("\n_____________________ \n\n");
+        //        table.endPerformanceProcedureScope();
+        //        table.endPerformanceOperationScope();
+    }
+
+    public void noSuchSymbol(PosSymbol qualifier, String symbolName, Location l) {
+
+        String message;
+
+        if (qualifier == null) {
+            message = "No such symbol: " + symbolName;
+        }
+        else {
+            message =
+                    "No such symbol in module: " + qualifier.getName() + "."
+                            + symbolName;
+        }
+
+        throw new SourceErrorException(message, l);
     }
 }

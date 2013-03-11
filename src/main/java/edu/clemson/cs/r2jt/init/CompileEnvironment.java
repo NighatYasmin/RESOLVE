@@ -74,7 +74,8 @@ public class CompileEnvironment {
     private boolean showBind = false;
     private boolean showImports = false;
     private boolean showIndirect = false;
-    private boolean perf = false;
+    //private boolean perf = false; 
+    private boolean PVCs = false;
     private boolean isabelle = false; // left out the isabelle() method
     private boolean debugOff = false;
 
@@ -247,7 +248,8 @@ public class CompileEnvironment {
         showEnv = false;
         showTable = false;
         showBind = false;
-        perf = false;
+        //perf = false;
+        PVCs = false;
     }
 
     /*public static Environment getInstance() {
@@ -363,7 +365,8 @@ public class CompileEnvironment {
      * For performance.
      */
     public void setPerformanceFlag() {
-        perf = true;
+        //perf = true;
+        PVCs = true;
     }
 
     /**
@@ -413,10 +416,13 @@ public class CompileEnvironment {
     }
 
     /**
-     * For performance.
+     * Returns true if performance.
+     *
      */
-    public boolean perf() {
-        return perf;
+    public boolean PVCs() {
+        //	public boolean perf() {
+        //		return perf;
+        return PVCs;
     }
 
     /**
