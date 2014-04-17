@@ -508,6 +508,28 @@ public class OldPopulator extends ResolveConceptualVisitor {
         table.completeTypeScope();
     }
 
+    // NY
+    public void visitPerformanceTypeDec(PerformanceTypeDec dec) {
+        //        Type type = getConceptualType(dec.getModel(), dec.getName());
+        //        TypeEntry entry =
+        //                new TypeEntry(table.getCurrentScope(), dec.getName(), type, dec
+        //                        .getExemplar());
+        //       table.addTypeToScope(entry);
+        //       table.createTypeScope();
+        //        VarEntry ex =
+        //                new VarEntry(table.getCurrentScope(), Mode.EXEMPLAR, dec
+        //                       .getExemplar(), type);
+        //       table.addVariableToScope(ex);
+        //       visitExp(dec.getConstraint());
+        if (dec.getPerf_Initialization() != null) {
+            visitPerformanceInitItem(dec.getPerf_Initialization());
+        }
+        if (dec.getPerf_Finalization() != null) {
+            visitPerformanceFinalItem(dec.getPerf_Finalization());
+        }
+        table.completeTypeScope();
+    }
+
     // changed this to handle local type declarations
     public void visitRepresentationDec(RepresentationDec dec) {
         Type type = getProgramType(dec.getRepresentation(), dec.getName());
@@ -1394,7 +1416,7 @@ public class OldPopulator extends ResolveConceptualVisitor {
     // // }
     // return type;
     // }
-    //
+    //  
     private Type getConceptualType(Ty ty, PosSymbol name) {
         TypeConverter tc = new TypeConverter(table);
         return tc.getConceptualType(ty, name);
