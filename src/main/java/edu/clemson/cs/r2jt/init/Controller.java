@@ -1262,6 +1262,11 @@ public class Controller {
                                     .getMainDir());
                 }
             }
+            else if (moduleToImport.getModuleKind() == ModuleKind.PROFILE) {
+                file =
+                        locator.locateFileInTree(moduleToImport.getFilename(),
+                                myInstanceEnvironment.getMainDir());
+            }
             else { // ModuleKind is body or enhancement
                 /* Check to see if this is one of the files we specified as not to be imported. */
                 if (!onNoImportList(moduleToImport.getFilename())) {
