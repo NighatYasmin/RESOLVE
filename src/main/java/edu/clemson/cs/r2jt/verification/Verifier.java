@@ -40,6 +40,24 @@ import edu.clemson.cs.r2jt.analysis.TypeResolutionException;
 import edu.clemson.cs.r2jt.analysis.ProgramExpTypeResolver;
 import edu.clemson.cs.r2jt.errors.ErrorHandler;
 import edu.clemson.cs.r2jt.typeandpopulate.MathSymbolTableBuilder;
+import edu.clemson.cs.r2jt.typeandpopulate.DuplicateSymbolException;
+import edu.clemson.cs.r2jt.typeandpopulate.MathSymbolTableBuilder;
+import edu.clemson.cs.r2jt.typeandpopulate.ModuleIdentifier;
+import edu.clemson.cs.r2jt.typeandpopulate.ModuleScopeBuilder;
+import edu.clemson.cs.r2jt.typeandpopulate.NoSuchSymbolException;
+import edu.clemson.cs.r2jt.typeandpopulate.ScopeBuilder;
+import edu.clemson.cs.r2jt.typeandpopulate.entry.OperationProfileEntry;
+import edu.clemson.cs.r2jt.typeandpopulate.entry.ProgramVariableEntry;
+import edu.clemson.cs.r2jt.typeandpopulate.entry.ProcedureEntry;
+import edu.clemson.cs.r2jt.typeandpopulate.entry.SymbolTableEntry;
+import edu.clemson.cs.r2jt.typeandpopulate.programtypes.PTType;
+import edu.clemson.cs.r2jt.typeandpopulate.query.NameQuery;
+import edu.clemson.cs.r2jt.typeandpopulate.query.OperationProfileQuery;
+import edu.clemson.cs.r2jt.typeandpopulate.query.ProgramVariableQuery;
+import edu.clemson.cs.r2jt.typeandpopulate.query.OperationQuery;
+import edu.clemson.cs.r2jt.utilities.SourceErrorException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Verifier extends ResolveConceptualVisitor {
 
@@ -67,6 +85,22 @@ public class Verifier extends ResolveConceptualVisitor {
     private boolean initializationRule = false;
 
     private boolean isInInterface = false;
+
+    // NY This expression holds the duration
+    private Exp Cum_Dur = null;
+    private Exp Cum_Dur1 = null;
+    private Exp procDur = null;
+    private Exp performanceEnsure = null;
+    private PosSymbol Profile_Name = null;
+    private PosSymbol Profile_CName = null;
+    private PosSymbol Profile_CPName = null;
+    private ModuleID Profile_EID = null;
+    private ModuleID Profile_CP_ID = null;
+    private PerformanceEModuleDec pEDec = null;
+    private PerformanceCModuleDec pCPDec = null;
+    private ConceptModuleDec conceptDec = null;
+    private PerformanceFinalItem perfFinalItem = null;
+    private PerformanceInitItem perfInitItem = null;
 
     // This buffer holds the verbose data
     private StringBuffer VCBuffer;
@@ -253,6 +287,7 @@ public class Verifier extends ResolveConceptualVisitor {
             ConceptModuleDec cDec =
                     (ConceptModuleDec) myInstanceEnvironment.getModuleDec(cid);
             addGlobalVariableForConcept(cDec, constraints, assertion, null);
+            System.out.println("336  cDec " + cDec.getName().toString());
         }
 
         ModuleDec modDec = getCurrentModuleBodyDec();
@@ -481,6 +516,7 @@ public class Verifier extends ResolveConceptualVisitor {
             newConf.setRight(conf);
 
             assertion.setFinalConfirm(newConf);
+            System.out.println("564  newConf    " + newConf.toString());
             VCBuffer.append("\n_____________________ \n");
             VCBuffer.append("\nConfirm Rule Applied: \n");
             VCBuffer.append(assertion.assertionToString());
@@ -530,6 +566,15 @@ public class Verifier extends ResolveConceptualVisitor {
         Exp ensures = null;
         Exp requires = null;
 
+        System.out.println(" 615  Entring  applyEBCallStmtRule");
+        System.out.println("616 stmt.getName() = " + stmt.getName().toString());
+
+        // NY the following variables will be used for duration
+        PosSymbol opName_AddDur = createPosSymbol("+");
+        PosSymbol opName_And = createPosSymbol("and");
+        Exp opduration = null;
+        OperationProfileEntry opName = null;
+
         ModuleID mid = getCurrentModuleID();
         ModuleDec ebDec = null;
         if (mid.getModuleKind() == ModuleKind.ENHANCEMENT_BODY) {
@@ -547,6 +592,7 @@ public class Verifier extends ResolveConceptualVisitor {
         }
 
         /* Find Corresponding OperationDec and Specification*/
+        // Heather - you probably need to duplicate this section to find your performance spec
         OperationDec opDec = null;
         if (ebDec instanceof EnhancementBodyModuleDec) {
             opDec =
@@ -569,6 +615,47 @@ public class Verifier extends ResolveConceptualVisitor {
         /* Get Ensures Clause - Set to "true" if nonexistent*/
         if (opDec != null) {
             Exp ens = (Exp) (((OperationDec) opDec).getEnsures());
+            System.out.println("664 ens = " + ens.toString());
+            // Here if you have the PerformanceDec, then get the duration. 
+            // Heather - So you might use TypeGraph.formConjunct to combine this ensures and the new duration for the final ensures
+
+            // NY Find the duration of an operation
+            if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
+                List<ProgramExp> args = stmt.getArguments();
+                System.out.println("670 args  =  " + args.toString());
+                // form a list of PTType from ProgramExp
+                java.util.List<PTType> argTypes = new LinkedList<PTType>();
+                for (ProgramExp arg : args) {
+                    argTypes.add(arg.getProgramType());
+                }
+                System.out.println("677 argTypes  =  " + argTypes.toString());
+                try {
+                    // search for the operation profile in the symbol table
+
+                    //     OperationProfileEntry op =
+                    opName =
+                            myRealSymbolTable.getScope(ebDec).queryForOne(
+                                    new OperationProfileQuery(null, stmt
+                                            .getName(), argTypes));
+
+                    opduration = opName.getDurationClause();
+                    System.out.println("687 Op name = "
+                            + opName.getName().toString());
+                    System.out.println("689 opduration = "
+                            + opduration.toString());
+                    performanceEnsure = opName.getEnsuresClause();
+                }
+                catch (NoSuchSymbolException nsse) {
+                    noSuchSymbol(null, stmt.getName().getName(), stmt
+                            .getLocation());
+                }
+                catch (DuplicateSymbolException dse) {
+                    //This should be caught earlier, when the duplicate operation is
+                    //created
+                    throw new RuntimeException(dse);
+                }
+            }
+
             if (ens != null)
                 ensures = (Exp) Exp.clone(ens);
             else
@@ -709,10 +796,70 @@ public class Verifier extends ResolveConceptualVisitor {
             assertion.addAssume(ensures);
         }
 
-        assertion.setFinalConfirm(conf);
+        // NY Add duration to the assertion
+        if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
+            Location loc = (Location) stmt.getName().getLocation().clone();
+            Dec myDec = getCurrentProcedure();
+            String details = "";
+            if (myDec != null) {
+                details = " in Procedure " + myDec.getName();
+            }
+            loc.setDetails("Duration Clause of " + opDec.getName() + details);
+            setLocation(Cum_Dur, loc);
+
+            conf = assertion.getFinalConfirm();
+            System.out.println("856   conf " + conf.toString() + " \n");
+            Exp oldexp = null;
+            Exp newexp = null;
+            oldexp = CreateRealExp("Cum_Dur");
+            newexp =
+                    new InfixExp(oldexp.getLocation(), oldexp, opName_AddDur,
+                            opduration);
+            newexp.setMathType(myTypeGraph.R);
+
+            newexp =
+                    replacePostConditionVariables(stmt.getArguments(), newexp,
+                            opDec, assertion);
+
+            Boolean cumDurExists = false;
+            cumDurExists = conf.toString().contains("Cum_Dur");
+
+            if (cumDurExists == false) {
+                if (Cum_Dur1 == null) {
+                    Cum_Dur1 = newexp;
+                    System.out.println("870a   Cum_Dur1 " + Cum_Dur1.toString()
+                            + " \n");
+                }
+                else {
+                    Cum_Dur1 = replace(Cum_Dur1, oldexp, newexp);
+                    System.out.println("870b   Cum_Dur1 " + Cum_Dur1.toString()
+                            + " \n");
+                }
+            }
+
+            System.out.println("870   oldexp " + oldexp.toString() + " \n");
+            System.out.println("871   newexp " + newexp.toString() + " \n");
+            System.out.println("872   conf " + conf.toString() + " \n");
+            conf = replace(conf, oldexp, newexp);
+            conf.setMathType(myTypeGraph.BOOLEAN);
+            System.out.println("875   conf " + conf.toString() + " \n");
+            assertion.setFinalConfirm(conf);
+
+            // NY The profile file has the ensure clause 
+            if (performanceEnsure != null) {
+                performanceEnsure =
+                        replacePostConditionVariables(stmt.getArguments(),
+                                performanceEnsure, opDec, assertion);
+
+                // NY Add the ensure clause to the Given for the VC
+                assertion.addAssume(performanceEnsure);
+            }
+        }
+
         VCBuffer.append("\n_____________________ \n");
         VCBuffer.append("\nOperation Call Rule Applied: \n");
         VCBuffer.append(assertion.assertionToString());
+        System.out.println(" 892  Leaving  applyEBCallStmtRule");
 
     }
 
@@ -758,8 +905,211 @@ public class Verifier extends ResolveConceptualVisitor {
     private void applyEBFuncAssignStmtRule(FuncAssignStmt stmt,
             AssertiveCode assertion) {
 
-        Exp cond = invk_cond(stmt.getAssign(), assertion);
+        System.out.println("\n\n 937  Entring  applyEBFuncAssignStmtRule");
 
+        Boolean evalutesMode = false;
+        List<VarDec> EvalVar = new List<VarDec>();
+        Exp requires = null;
+        Exp ensures = null;
+        OperationDec opDec = null;
+        String operationName = null;
+
+        operationName = stmt.getAssign().toString();
+        System.out.println("948  operationName " + operationName);
+
+        // NY Find the current concept 
+        Scope current = table.getCurrentScope();
+        ScopeID sid = current.getScopeID();
+        ModuleID mid = sid.getModuleID();
+        ModuleID cid = mid.getConceptID();
+        if (cid != null && cid.getName() != null) {
+            conceptDec =
+                    (ConceptModuleDec) myInstanceEnvironment.getModuleDec(cid);
+            System.out.println("958  conceptDec "
+                    + conceptDec.getName().toString());
+        }
+
+        if (conceptDec != null) {
+            List<Dec> decs = conceptDec.getDecs();
+            Iterator<Dec> decIt = decs.iterator();
+            while (decIt.hasNext()) {
+                Dec myDec = decIt.next();
+                /* NY 
+                 * Find the operation name from the concept and compare with the 
+                 * operation name from the function call */
+                if (myDec instanceof OperationDec
+                        && myDec.getName().toString() == operationName) {
+                    opDec = (OperationDec) myDec;
+                    ensures = opDec.getEnsures();
+                    requires = opDec.getRequires();
+                    System.out.println("975  opDec.getName "
+                            + opDec.getName().toString());
+                    System.out.println("977  ensures " + ensures.toString());
+                    if (requires != null) {
+                        System.out.println("979  requires "
+                                + requires.toString());
+                        //     requires = replacePreConditionVariables(requires, stmt.getArguments(), opDec, assertion);
+                    }
+
+                    System.out
+                            .println("985  myDec.getName().toString() == operationName      "
+                                    + myDec.getName().toString()
+                                    + " == "
+                                    + operationName);
+
+                    // NY Duration for the function
+                    if (myInstanceEnvironment.flags
+                            .isFlagSet(Verifier.FLAG_PERF_VC)) {
+                        Iterator<Dec> ip = pCPDec.getDecs().iterator();
+                        PosSymbol opName_AddDur = createPosSymbol("+");
+                        while (ip.hasNext()) {
+                            Dec tmp = ip.next();
+                            if (tmp instanceof PerformanceOperationDec) {
+                                if (tmp.getName().toString() == operationName) {
+                                    Exp OpDur =
+                                            ((PerformanceOperationDec) tmp)
+                                                    .getDuration();
+                                    System.out.println(" 1002 OpDur = "
+                                            + OpDur.toString());
+                                    Exp conf = assertion.getFinalConfirm();
+                                    System.out.println(" 1005 conf1 = "
+                                            + conf.toString());
+                                    Exp oldexp = null;
+                                    Exp newexp = null;
+                                    oldexp = CreateRealExp("Cum_Dur");
+                                    newexp =
+                                            new InfixExp(oldexp.getLocation(),
+                                                    oldexp, opName_AddDur,
+                                                    OpDur);
+                                    newexp.setMathType(myTypeGraph.R);
+
+                                    Boolean cumDurExists = false;
+                                    cumDurExists =
+                                            conf.toString().contains("Cum_Dur");
+
+                                    System.out.println(" 1005 cumDurExists = "
+                                            + cumDurExists.toString());
+                                    if (cumDurExists == false) {
+                                        if (Cum_Dur1 == null) {
+                                            Cum_Dur1 = newexp;
+                                            System.out
+                                                    .println("1041   Cum_Dur1 "
+                                                            + Cum_Dur1
+                                                                    .toString()
+                                                            + " \n");
+                                        }
+                                        else {
+                                            Cum_Dur1 =
+                                                    replace(Cum_Dur1, oldexp,
+                                                            newexp);
+
+                                            System.out
+                                                    .println("1042   Cum_Dur1 "
+                                                            + Cum_Dur1
+                                                                    .toString()
+                                                            + " \n");
+                                        }
+                                    }
+
+                                    System.out.println(" 1016 oldexp = "
+                                            + oldexp.toString());
+                                    System.out.println(" 1018 newexp = "
+                                            + newexp.toString());
+                                    System.out.println(" 1020 conf = "
+                                            + conf.toString());
+                                    conf = replace(conf, oldexp, newexp);
+                                    conf.setMathType(myTypeGraph.BOOLEAN);
+                                    System.out.println(" 1024 conf = "
+                                            + conf.toString());
+                                    assertion.setFinalConfirm(conf);
+                                    Exp conf2 = assertion.getFinalConfirm();
+                                    System.out.println(" 1028 conf2 = "
+                                            + conf2.toString());
+                                }
+                            }
+                        }
+                    }
+
+                    /* NY  Check for EVALUATES mode */
+                    //    evalutesMode =
+                    //            CheckEvalMode(assertion, (OperationDec) myDec,
+                    //                   EvalVar);
+
+                    VerificationStatement curAssertion = null;
+
+                    Iterator<ParameterVarDec> paramIter =
+                            ((OperationDec) myDec).getParameters().iterator();
+
+                    List<ParameterVarDec> paramsRea =
+                            new List<ParameterVarDec>();
+                    while (paramIter.hasNext()) {
+                        ParameterVarDec tmpPVD = paramIter.next();
+                        if (tmpPVD != null) {
+                            paramsRea.add(tmpPVD);
+                        }
+                        if (tmpPVD.getMode() == Mode.EVALUATES) {
+                            /*  Tmp fix. Sami will take care of this!
+                             evalutesMode = true;
+
+                                 // NY -- Create a variable for the evaluates mode 
+                                 System.out.println("1000   tmpPVD.getName() = "
+                                         + tmpPVD.getName().toString());
+                                 VarDec var = new VarDec();
+                                 var.setName(tmpPVD.getName());
+                                 var.setTy(tmpPVD.getTy());
+                                 var.setMathType(tmpPVD.getMathType());
+                                 System.out.println("1010   var = "
+                                         + var.getName().toString());
+                                 assertion.addVariableDec(var);
+                                 EvalVar.add(var);
+
+                                 curAssertion = assertion.getLastAssertion();
+                                 if (curAssertion.getType() == VerificationStatement.VARIABLE) {
+                                     applyVariableDeclRule(curAssertion, assertion);
+                                 }  */
+                        }
+                    }
+                }
+            }
+        }
+
+        /* NY  Add precondition to the Confirm clause */
+        if (evalutesMode == true && requires != null) {
+            //              requires = replacePreConditionVariables(requires, stmt.getArguments(),
+            //               opDec, assertion);
+
+            if (stmt.getLocation() != null) {
+                Location loc = (Location) stmt.getLocation().clone();
+                //                     Dec myDec = getCurrentProcedure();
+                String details = "";
+                Dec myProcDec = getCurrentProcedure();
+                if (myProcDec != null) {
+                    details = " in Procedure " + myProcDec.getName();
+                }
+                loc.setDetails("Requires Clause of " + opDec.getName()
+                        + details);
+                setLocation(requires, loc);
+            }
+            else {
+                Location loc = new Location(null, null);
+                //               Dec myDec = getCurrentProcedure();
+                String details = "";
+                Dec myProcDec = getCurrentProcedure();
+                if (myProcDec != null) {
+                    details = " in Procedure " + myProcDec.getName();
+                }
+                loc.setDetails("Requires Clause of " + opDec.getName()
+                        + details);
+                setLocation(requires, loc);
+            }
+            assertion.addConfirm(requires);
+        }
+
+        Exp cond = invk_cond(stmt.getAssign(), assertion);
+        System.out.println("1111  stmt.getAssign() "
+                + stmt.getAssign().toString());
+        System.out.println("1113  stmt.getVar() " + stmt.getVar().toString());
+        System.out.println("1114   cond = " + cond.toString());
         if (cond != null) {
             Location loc = (Location) stmt.getAssign().getLocation().clone();
             Dec myDec = getCurrentProcedure();
@@ -769,10 +1119,12 @@ public class Verifier extends ResolveConceptualVisitor {
             }
             loc.setDetails("Requires Clause of " + stmt.getAssign() + details);
             setLocation(cond, loc);
-            assertion.addConfirm(cond);
+            //      assertion.addConfirm(cond);
         }
 
         Exp replacement = getCorAssignPartExp(stmt.getAssign(), assertion);
+        System.out.println("1128   replacement = " + replacement.toString());
+        System.out.println("1129  stmt.getVar() " + stmt.getVar().toString());
         Exp var = null;
         if (stmt.getVar() instanceof VariableDotExp) {
             var = new DotExp();
@@ -800,14 +1152,18 @@ public class Verifier extends ResolveConceptualVisitor {
                 }
             }
             ((DotExp) var).setSegments(newSegements);
+            System.out.println("1157   var = " + var.toString());
         }
         else if (stmt.getVar() instanceof VariableExp) {
+            System.out.println("1158   stmt.getVar() = "
+                    + stmt.getVar().toString());
             var = new VarExp();
             ((VarExp) var)
                     .setName(createPosSymbol(getVarNameStr(stmt.getVar())));
             ((VarExp) var).setType(stmt.getVar().getType());
             ((VarExp) var).setMathType(stmt.getVar().getMathType());
             ((VarExp) var).setMathTypeValue(stmt.getVar().getMathTypeValue());
+            System.out.println("1167   var = " + var.toString());
         }
         /*		if(stmt.getAssign() instanceof ProgramParamExp){
          ModuleDec ebDec = null;
@@ -844,11 +1200,66 @@ public class Verifier extends ResolveConceptualVisitor {
         Exp conf = assertion.getFinalConfirm();
         //String str = conf.toString(0);
         conf = Exp.replace(conf, var, replacement);
+        System.out.println("1208  conf    " + conf.toString());
+
+        // NY Develop the duration expression to finalize local variable 
+        //    created for EVALUTES mode
+        Iterator<VarDec> itV = EvalVar.iterator();
+        if ((evalutesMode == true)
+                && (myInstanceEnvironment.flags
+                        .isFlagSet(Verifier.FLAG_PERF_VC))) {
+            while (itV.hasNext()) {
+                String LocalVar = "";
+                VarDec mydec1 = itV.next();
+                LocalVar = mydec1.getName().toString();
+
+                // NY Temp fix! of ignoring '_' 
+                if (LocalVar.charAt(0) != '_') {
+                    Exp finalDur = null;
+                    PosSymbol opName_add = createPosSymbol("+");
+                    Exp oldexp = CreateRealExp("Cum_Dur");
+                    Exp newexp = null;
+
+                    Ty varTy = mydec1.getTy();
+                    NameTy varNameTy = (NameTy) varTy;
+                    TypeID typeID = new TypeID(varNameTy.getName().getSymbol());
+                    ModuleScope curr = table.getModuleScope();
+                    TypeHolder typeHold = curr.getTypeHolder();
+                    Type vnType = typeHold.searchForType(typeID);
+                    if (vnType instanceof ConcType) {
+                        Iterator<Dec> ip = pCPDec.getDecs().iterator();
+                        while (ip.hasNext()) {
+                            Dec tmp = ip.next();
+                            if (tmp instanceof PerformanceTypeDec) {
+                                perfFinalItem =
+                                        ((PerformanceTypeDec) tmp)
+                                                .getPerf_Finalization();
+                                finalDur = perfFinalItem.getDuration();
+                            }
+                        }
+                    }
+                    else {
+                        finalDur = FinalizAnyDur(mydec1);
+                    }
+                    newexp =
+                            new InfixExp(mydec1.getLocation(), oldexp,
+                                    opName_add, finalDur);
+                    newexp.setMathType(myTypeGraph.R);
+                    conf = replace(conf, oldexp, newexp);
+                    System.out
+                            .println("1207   conf " + conf.toString() + " \n");
+                    conf.setMathType(myTypeGraph.BOOLEAN);
+                }
+            }
+        }
 
         assertion.setFinalConfirm(conf);
         VCBuffer.append("\n_____________________ \n");
         VCBuffer.append("\nFunction Rule Applied: \n");
         VCBuffer.append(assertion.assertionToString());
+        //     System.out.println("1154  assertion   "
+        //             + assertion.assertionToString().toString());
+        System.out.println("1148  Leaving  applyEBFuncAssignStmtRule \n\n");
     }
 
     /**
@@ -858,7 +1269,7 @@ public class Verifier extends ResolveConceptualVisitor {
      *                  a call to this method.
      */
     private void applyEBRules(AssertiveCode assertion) {
-
+        System.out.println("1277  Entring applyEBRules");
         while (assertion.hasAnotherAssertion()) {
             VerificationStatement curAssertion = assertion.getLastAssertion();
             if (curAssertion.getType() == VerificationStatement.ASSUME)
@@ -989,6 +1400,27 @@ public class Verifier extends ResolveConceptualVisitor {
         //	  	conf = replace(conf, left, right);
         //	  	conf = replace(conf, tmp, left);
 
+        if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
+            PosSymbol opName_AddDur = createPosSymbol("+");
+
+            VarExp SwapDurExp = new VarExp();
+            SwapDurExp.setName(createPosSymbol("Dur_Swap"));
+            SwapDurExp.setType(BooleanType.INSTANCE);
+            SwapDurExp.setMathType(BOOLEAN);
+
+            conf = assertion.getFinalConfirm();
+            Exp oldexp = null;
+            Exp newexp = null;
+            oldexp = CreateRealExp("Cum_Dur");
+            newexp =
+                    new InfixExp(oldexp.getLocation(), oldexp, opName_AddDur,
+                            SwapDurExp);
+            newexp.setMathType(myTypeGraph.R);
+
+            conf = replace(conf, oldexp, newexp);
+            conf.setMathType(myTypeGraph.BOOLEAN);
+        }
+
         assertion.setFinalConfirm(conf);
 
         VCBuffer.append("\n_____________________ \n");
@@ -1014,6 +1446,77 @@ public class Verifier extends ResolveConceptualVisitor {
 
     private void applyIfStmtRule(IfStmt stmt, AssertiveCode assertion) {
 
+        System.out.println("1454 Enterning  applyIfStmtRule");
+
+        // NY
+        OperationDec opDec = null;
+        String operationName = null;
+
+        operationName = stmt.getTest().toString();
+        System.out.println("1461  operationName " + operationName);
+
+        // NY Find the current concept 
+        Scope current = table.getCurrentScope();
+        ScopeID sid = current.getScopeID();
+        ModuleID mid = sid.getModuleID();
+        ModuleID cid = mid.getConceptID();
+        if (cid != null && cid.getName() != null) {
+            conceptDec =
+                    (ConceptModuleDec) myInstanceEnvironment.getModuleDec(cid);
+        }
+
+        if (conceptDec != null) {
+            List<Dec> decs = conceptDec.getDecs();
+            Iterator<Dec> decIt = decs.iterator();
+            while (decIt.hasNext()) {
+                Dec myDec = decIt.next();
+                /* NY 
+                 * Find the operation name from the concept and compare with the 
+                 * operation name from the function call */
+                if (myDec instanceof OperationDec
+                        && myDec.getName().toString() == operationName) {
+                    opDec = (OperationDec) myDec;
+
+                    // NY Duration for the function
+                    if (myInstanceEnvironment.flags
+                            .isFlagSet(Verifier.FLAG_PERF_VC)) {
+                        Iterator<Dec> ip = pCPDec.getDecs().iterator();
+                        PosSymbol opName_AddDur = createPosSymbol("+");
+                        while (ip.hasNext()) {
+                            Dec tmp1 = ip.next();
+                            if (tmp1 instanceof PerformanceOperationDec) {
+                                if (tmp1.getName().toString() == operationName) {
+                                    Exp OpDur =
+                                            ((PerformanceOperationDec) tmp1)
+                                                    .getDuration();
+                                    System.out.println(" 1497 OpDur = "
+                                            + OpDur.toString());
+
+                                    Exp conf1 = assertion.getFinalConfirm();
+                                    Exp oldexp = null;
+                                    Exp newexp = null;
+                                    oldexp = CreateRealExp("Cum_Dur");
+                                    newexp =
+                                            new InfixExp(oldexp.getLocation(),
+                                                    oldexp, opName_AddDur,
+                                                    OpDur);
+                                    newexp.setMathType(myTypeGraph.R);
+                                    System.out.println(" 1509 conf1 = "
+                                            + conf1.toString());
+
+                                    conf1 = replace(conf1, oldexp, newexp);
+                                    conf1.setMathType(myTypeGraph.BOOLEAN);
+                                    System.out.println(" 1514 conf1 = "
+                                            + conf1.toString());
+                                    assertion.setFinalConfirm(conf1);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         /* If Part */
         AssertiveCode ifAssertion = (AssertiveCode) assertion.clone();
         appendToLocation(ifAssertion.confirm, " , If \"if\" condition at "
@@ -1022,6 +1525,8 @@ public class Verifier extends ResolveConceptualVisitor {
         Exp conf =
                 (Exp) Exp.clone(invk_cond((ProgramExp) Exp
                         .clone(stmt.getTest()), assertion));
+        System.out.println("1533 conf = " + conf.toString());
+
         if (conf != null) {
             Location loc;
             if (conf.getLocation() != null) {
@@ -1039,6 +1544,7 @@ public class Verifier extends ResolveConceptualVisitor {
         Exp assume =
                 getCorAssignPartExp((ProgramExp) Exp.clone(stmt.getTest()),
                         ifAssertion);
+        System.out.println("1552  assume  =  " + assume.toString());
         if (stmt.getTest().getLocation() != null) {
             Location loc = (Location) (stmt.getTest().getLocation().clone());
             loc.setDetails("If Statement Condition");
@@ -1090,6 +1596,7 @@ public class Verifier extends ResolveConceptualVisitor {
             setLocation(neg, loc);
         }
         negifAssertion.addAssume(neg);
+        System.out.println("1604  neg  =  " + neg.toString());
 
         if (stmt.getElseclause() != null) {
             i = stmt.getElseclause().iterator();
@@ -1106,7 +1613,10 @@ public class Verifier extends ResolveConceptualVisitor {
 
         VCBuffer.append("\n_____________________ \n");
         VCBuffer.append("\n\n\nNegation of If Part Rule Completed\n");
+        Exp conf2 = assertion.getFinalConfirm();
+        System.out.println(" 1622 conf2 = " + conf2.toString());
 
+        System.out.println("1624 Leaving  applyIfStmtRule");
     }
 
     private void applyIterateRule(IterateStmt stmt, AssertiveCode assertion) {
@@ -1139,6 +1649,13 @@ public class Verifier extends ResolveConceptualVisitor {
     }
 
     private void applyPartOneWhileRule(WhileStmt stmt, AssertiveCode assertion) {
+
+        System.out.println("1658  Entring applyPartOneWhileRule");
+        Exp confny = assertion.getFinalConfirm();
+        System.out.println("1660   confny " + confny.toString() + " \n");
+
+        // NY
+        String operationName = null;
 
         ModuleDec moduleDec = getCurrentBodyModuleDec();
         boolean concept = false;
@@ -1213,6 +1730,13 @@ public class Verifier extends ResolveConceptualVisitor {
             part_one.addAssume(assume);
         }
 
+        // NY
+        if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
+            operationName = stmt.getTest().toString();
+            System.out.println("1737  operationName " + operationName);
+            //     AddDurConfirm(operationName, assertion);
+        }
+
         Exp cond = invk_cond(stmt.getTest(), assertion);
         if (cond != null) {
             part_one.addConfirm(cond);
@@ -1228,11 +1752,17 @@ public class Verifier extends ResolveConceptualVisitor {
         while (i.hasNext()) {
             part_one.addCode((Statement) ((i.next().clone())));
         }
+
+        Exp confny1 = assertion.getFinalConfirm();
+        System.out.println("     1760   confny1 " + confny1.toString() + " \n");
+
         Exp conf = getTrueVarExp();
         if (stmt.getDecreasing() != null)
             conf = getWhileRuleConfirm(stmt, assertion);
         else
             conf = stmt.getMaintaining();
+
+        System.out.println("1765   conf " + conf.toString() + " \n");
 
         Location loc = (Location) conf.getLocation();
         if (loc != null) {
@@ -1263,11 +1793,57 @@ public class Verifier extends ResolveConceptualVisitor {
 
         applyEBRules(part_one);
 
+        /*     if (Cum_Dur1 != null) {
+                 Exp oldexp1 = null;
+                 oldexp1 = CreateRealExp("Cum_Dur");
+
+                 Exp confny3 = assertion.getFinalConfirm();
+                 confny3 = replace(confny3, oldexp1, Cum_Dur1);
+                 confny3.setMathType(myTypeGraph.BOOLEAN);
+                 System.out.println("1875   confny3 " + confny3.toString() + " \n");
+                 assertion.setFinalConfirm(confny3);
+                 Cum_Dur1 = null;
+             } */
+
+        Exp ElapsedTime = stmt.getElapsed_Time();
+        if (ElapsedTime != null) {
+            System.out
+                    .println("     1858   ElapsedTime " + ElapsedTime + " \n");
+            Exp oldexp1 = null;
+            oldexp1 = CreateRealExp("Cum_Dur");
+
+            PosSymbol opName_add = createPosSymbol("+");
+            Exp newexp = null;
+            newexp =
+                    new InfixExp(ElapsedTime.getLocation(), oldexp1,
+                            opName_add, ElapsedTime);
+            newexp.setMathType(myTypeGraph.R);
+
+            Exp confny4 = assertion.getFinalConfirm();
+            confny4 = replace(confny4, oldexp1, newexp);
+            confny4.setMathType(myTypeGraph.BOOLEAN);
+            System.out.println("1875   confny4 " + confny4.toString() + " \n");
+            assertion.setFinalConfirm(confny4);
+            ElapsedTime = null;
+        }
+        else {
+            System.out.println("     1858   ElapsedTime is null");
+        }
+
+        Exp confny2 = assertion.getFinalConfirm();
+        System.out.println("1760   confny2 " + confny2.toString() + " \n");
+        System.out.println("1798  Leaving applyPartOneWhileRule");
         VCBuffer.append("\n\n\n\tEnd Part One \n");
 
     }
 
     private void applyPartTwoWhileRule(WhileStmt stmt, AssertiveCode assertion) {
+
+        System.out.println("1800  Entring applyPartTwoWhileRule");
+        Exp confny3 = assertion.getFinalConfirm();
+        System.out.println("1808   confny3 " + confny3.toString() + " \n");
+        // NY
+        String operationName = null;
 
         ModuleDec moduleDec = getCurrentBodyModuleDec();
         boolean concept = false;
@@ -1332,6 +1908,13 @@ public class Verifier extends ResolveConceptualVisitor {
             part_two.addAssume(assume);
         }
 
+        // NY
+        if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
+            operationName = stmt.getTest().toString();
+            System.out.println("1863  operationName " + operationName + "\n");
+            //      AddDurConfirm(operationName, assertion);
+        }
+
         Exp cond = invk_cond(stmt.getTest(), assertion);
         if (cond != null) {
             part_two.addConfirm(cond);
@@ -1352,13 +1935,14 @@ public class Verifier extends ResolveConceptualVisitor {
         applyEBRules(part_two);
 
         VCBuffer.append("\n\n\n\tEnd Part Two \n");
+        System.out.println("1931  Leaving applyPartTwoWhileRule");
 
     }
 
     private void applyProofRulesToAssertiveCode(Statement stmt,
             AssertiveCode assertion) {
         VCBuffer.append("\t\t");
-
+        System.out.println("1903  Entring applyProofRulesToAssertiveCode");
         if (stmt instanceof FuncAssignStmt) {
             applyEBFuncAssignStmtRule((FuncAssignStmt) stmt, assertion);
         }
@@ -1426,20 +2010,24 @@ public class Verifier extends ResolveConceptualVisitor {
             OperationDec opDec, CallStmt stmt, List<ParameterVarDec> paramsRea,
             AssertiveCode assertion) {
 
+        System.out.println(" 1960  applySimpleCallRule");
+
         requires =
                 replacePreConditionVariables(requires, stmt.getArguments(),
                         opDec, assertion);
+        System.out.println("1965   requires");
         if (ensures == null)
             ensures =
                     replaceSimplePostConditionVariables(stmt.getArguments(),
                             opDec, assertion, true);
         else {
+            System.out.println("1973   ensures");
             ensures =
                     replaceSimplePostConditionVariables(stmt.getArguments(),
                             opDec, assertion, true);
-
+            System.out.println("1977   ensures");
         }
-
+        System.out.println("1979 ensures");
         Exp conf = assertion.getFinalConfirm();
 
         if (ensures instanceof EqualsExp) {
@@ -1516,12 +2104,60 @@ public class Verifier extends ResolveConceptualVisitor {
 
     private void applyVariableDeclRule(VerificationStatement var,
             AssertiveCode assertion) {
+        System.out.println("2056 Enterning  applyVariableDeclRule");
+        Exp conf;
         if (var != null) {
             VarDec varDec = (VarDec) var.getAssertion();
-
             addFreeVar(varDec, assertion);
+            conf = assertion.getFinalConfirm();
 
-            Exp conf = assertion.getFinalConfirm();
+            // NY - Add duration for the local variable initialization 
+            if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
+                if (varDec.getName().toString().charAt(0) != '_') {
+                    //        assertion.setFinalConfirm(AddInitDur(varDec, assertion));
+
+                    System.out.println("4067   varDec.getName().toString() "
+                            + varDec.getName().toString() + " \n");
+
+                    Exp initDur = null;
+                    PosSymbol opName_add = createPosSymbol("+");
+                    Exp oldexp = CreateRealExp("Cum_Dur");
+                    Exp newexp = null;
+
+                    Ty varTy = varDec.getTy();
+                    NameTy varNameTy = (NameTy) varTy;
+                    TypeID typeID = new TypeID(varNameTy.getName().getSymbol());
+                    ModuleScope curr = table.getModuleScope();
+                    TypeHolder typeHold = curr.getTypeHolder();
+                    Type vnType = typeHold.searchForType(typeID);
+                    if (vnType instanceof ConcType) {
+                        Iterator<Dec> ip = pCPDec.getDecs().iterator();
+                        while (ip.hasNext()) {
+                            Dec tmp = ip.next();
+                            if (tmp instanceof PerformanceTypeDec) {
+                                perfInitItem =
+                                        ((PerformanceTypeDec) tmp)
+                                                .getPerf_Initialization();
+                                initDur = perfInitItem.getDuration();
+                            }
+                        }
+                    }
+                    else {
+                        initDur = IniatialDur(varDec);
+                    }
+                    newexp =
+                            new InfixExp(varDec.getLocation(), oldexp,
+                                    opName_add, initDur);
+                    newexp.setMathType(myTypeGraph.R);
+
+                    // NY - add initialization duration VC to assertive code
+                    conf = replace(conf, oldexp, newexp);
+                    conf.setMathType(myTypeGraph.BOOLEAN);
+                    assertion.setFinalConfirm(AddInitDur(varDec, assertion));
+                }
+            }
+
+            //       conf = assertion.getFinalConfirm();
             InfixExp newConf = new InfixExp();
             newConf.setRight(conf);
 
@@ -1532,7 +2168,6 @@ public class Verifier extends ResolveConceptualVisitor {
                 init.getLocation().setDetails(
                         "Initial Value for " + varDec.getName().getName());
                 setLocation(init, loc);
-
             }
 
             Exp constraints = getConstraints((VarDec) var.getAssertion());
@@ -1686,11 +2321,42 @@ public class Verifier extends ResolveConceptualVisitor {
                 }
             }
 
+            // NY - Add duration for the local variable initialization 
+            //    if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
+            //   if (varDec.getName().toString().charAt(0) != '_') {
+            //       assertion.setFinalConfirm(AddInitDur(varDec, assertion));
+            //       System.out.println("1906   varDec.getName().toString() "
+            //               + varDec.getName().toString() + " \n");
+            //   }
+            //     }
+            /*  if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
+                  PosSymbol opName_AddDur = createPosSymbol("+");
+                  Exp InitalDur = IniatialDur(varDec);
+                  System.out.println("1891   varDec name "
+                          + varDec.getName().toString() + " \n");
+                  System.out.println("1899   InitalDur " + InitalDur.toString()
+                          + " \n");
+
+                  conf = assertion.getFinalConfirm();
+                  System.out.println("1862   conf " + conf.toString() + " \n");
+                  Exp oldexp = null;
+                  Exp newexp = null;
+                  oldexp = CreateRealExp("Cum_Dur");
+                  newexp =
+                          new InfixExp(oldexp.getLocation(), oldexp,
+                                  opName_AddDur, InitalDur);
+                  newexp.setMathType(myTypeGraph.R);
+
+                  conf = replace(conf, oldexp, newexp);
+                  conf.setMathType(myTypeGraph.BOOLEAN);
+                  assertion.setFinalConfirm(conf);
+                  System.out.println("1907   conf " + conf.toString() + " \n");
+              } */
+
             VCBuffer.append("\n_____________________ \n");
             VCBuffer.append("\nVariable Declaration Rule Applied: \n");
             VCBuffer.append(assertion.assertionToString());
         }
-
     }
 
     /**
@@ -2366,6 +3032,40 @@ public class Verifier extends ResolveConceptualVisitor {
         }
         return curOperation;
 
+    }
+
+    //NY
+    public PerformanceOperationDec formPerfOpDec(PerformanceOperationDec dec) {
+
+        PerformanceOperationDec curOperation = new PerformanceOperationDec();
+
+        if (dec.getName() != null) {
+            curOperation.setName(dec.getName());
+        }
+        if (!(dec.getParameters().isEmpty())) {
+            curOperation.setParameters(dec.getParameters());
+        }
+        if (dec.getReturnTy() != null) {
+            curOperation.setParameters(dec.getParameters());
+
+        }
+        if (dec.getStateVars() != null) {
+            curOperation.setParameters(dec.getParameters());
+
+        }
+        if (dec.getRequires() != null) {
+            curOperation.setRequires((Exp) (dec.getRequires().clone()));
+
+        }
+        if (dec.getEnsures() != null) {
+            curOperation.setEnsures((Exp) (dec.getEnsures().clone()));
+
+        }
+        if (dec.getDuration() != null) {
+            curOperation.setDuration((Exp) (dec.getDuration().clone()));
+
+        }
+        return curOperation;
     }
 
     private void generateVCsForOperationParameter(FacilityDec dec,
@@ -3569,7 +4269,11 @@ public class Verifier extends ResolveConceptualVisitor {
 
     private Exp getCorAssignPartExp(ProgramExp exp, AssertiveCode assertion) {
 
+        System.out.println("4235  Entring    getCorAssignPartExp");
+        System.out.println("4236  exp   " + exp.toString());
+
         if (exp instanceof ProgramCharExp) {
+            System.out.println("4224  exp = " + exp.toString());
             return exp;
         }
         else if (exp instanceof ProgramDotExp) {
@@ -3580,6 +4284,7 @@ public class Verifier extends ResolveConceptualVisitor {
             else {
                 return exp;
             }
+			System.out.println("4246  tmp = " + tmp.toString());
         }
         else if (exp instanceof ProgramDoubleExp) {
             return exp;
@@ -3592,6 +4297,7 @@ public class Verifier extends ResolveConceptualVisitor {
         }
         else if (exp instanceof ProgramIntegerExp) {
             ProgramIntegerExp expAsPIE = (ProgramIntegerExp) exp;
+            System.out.println("4262  replacement = ");
             return new IntegerExp(expAsPIE.getLocation(), null, expAsPIE
                     .getValue());
         }
@@ -3607,13 +4313,16 @@ public class Verifier extends ResolveConceptualVisitor {
                         getCorAssignPartExp((ProgramExp) Exp.clone(tmp
                                 .getSecond()), assertion);
                 Exp result = myTypeGraph.formConjunct(exp1, exp2);
+                System.out.println("4278  result = " + result.toString());
                 return result;
             }
             else {
+                System.out.println("4282  here");
                 ProgramFunctionExp tmp2 = corProgramFuncExp((ProgramOpExp) exp);
                 Exp result =
                         corProgramFunctionExp(((ProgramFunctionExp) Exp
                                 .clone(tmp2)), assertion);
+                System.out.println("4283  result   ." + result.toString());
                 return result;
             }
 
@@ -3624,19 +4333,26 @@ public class Verifier extends ResolveConceptualVisitor {
                 tmp.setArguments(((ProgramParamExp) exp).getArguments());
                 tmp.setName(((ProgramParamExp) exp).getName());
                 Exp replacement = corProgramFunctionExp(tmp, assertion);
+                System.out.println("4298  tmp   " + tmp.toString());
+                System.out.println("4299  replacement   "
+                        + replacement.toString());
+                System.out.println("4315  Leaving    getCorAssignPartExp");
                 return replacement;
             }
             Exp replacement =
                     getCorAssignPartExp((ProgramExp) Exp
                             .clone(((ProgramParamExp) exp).getSemanticExp()),
                             assertion);
-
+            System.out.println("4307  replacement = " + replacement.toString());
+            System.out.println("4323  Leaving    getCorAssignPartExp");
             return replacement;
         }
         else if (exp instanceof ProgramStringExp) {
+            System.out.println("4329  Leaving    getCorAssignPartExp");
             return exp;
         }
         else {
+            System.out.println("4331  Leaving    getCorAssignPartExp");
             return exp;
         }
 
@@ -4344,7 +5060,6 @@ public class Verifier extends ResolveConceptualVisitor {
 
             if (vnType instanceof IndirectType) {
                 vnType = ((IndirectType) vnType).getType();
-                //}
             }
             if (vnType instanceof ConcType) {
                 ModuleID mid = ((ConcType) vnType).getModuleID();
@@ -5147,6 +5862,24 @@ public class Verifier extends ResolveConceptualVisitor {
         return typeParms;
     }
 
+    // --ny
+    private List<String> getPerfTypeParms(ModuleID cid) {
+        List<String> typeParms = new List<String>();
+        PerformanceEModuleDec pDec =
+                (PerformanceEModuleDec) myInstanceEnvironment.getModuleDec(cid);
+        List<ModuleParameterDec> mpList = pDec.getParameters();
+        Iterator<ModuleParameterDec> mpIt = mpList.iterator();
+        Dec mp = null;
+        while (mpIt.hasNext()) {
+            mp = mpIt.next().getWrappedDec();
+            if (mp instanceof ConceptTypeParamDec) {
+                typeParms.addUnique(((ConceptTypeParamDec) mp).getName()
+                        .toString());
+            }
+        }
+        return typeParms;
+    }
+
     // Get the PosSymbol associated with the VariableExp left 
     private PosSymbol getVarName(VariableExp left) {
         PosSymbol name;
@@ -5258,6 +5991,11 @@ public class Verifier extends ResolveConceptualVisitor {
     // ===========================================================
 
     private Exp getWhileRuleConfirm(WhileStmt stmt, AssertiveCode assertion) {
+
+        System.out.println(" 5971   Entring getWhileRuleConfirm");
+        Exp confny2 = assertion.getFinalConfirm();
+        System.out.println("5972   confny2 " + confny2.toString() + " \n");
+
         InfixExp assume = new InfixExp();
         Exp inv = getTrueVarExp();
         if (stmt.getMaintaining() != null) {
@@ -5279,6 +6017,9 @@ public class Verifier extends ResolveConceptualVisitor {
         }
 
         assume.setLeft(inv);
+
+        System.out.println("5988   inv " + inv.toString() + " \n");
+
         VarExp var = new VarExp();
         ConcType pval = getPVAL();
         pval = NQV(assertion.getFinalConfirm(), pval, assertion);
@@ -5287,6 +6028,8 @@ public class Verifier extends ResolveConceptualVisitor {
         var.setName(pval.getName());
         var.setType(pval.getType());
         var.setMathType(Z);
+
+        System.out.println("5994   var " + var.toString() + " \n");
 
         InfixExp PExp = new InfixExp();
         PExp.setLeft((Exp) Exp.clone(stmt.getDecreasing()));
@@ -5311,7 +6054,7 @@ public class Verifier extends ResolveConceptualVisitor {
         }
 
         assume.setRight(PExp);
-
+        System.out.println(" 6043   Leaving getWhileRuleConfirm");
         return assume;
     }
 
@@ -5369,11 +6112,26 @@ public class Verifier extends ResolveConceptualVisitor {
 
     private Exp invk_cond(Exp test, AssertiveCode assertion) {
 
+        System.out.println("6064  Entering     invk_cond");
+        if (test != null && assertion != null) {
+            System.out.println("6066  test    " + test.toString());
+            System.out.println("6067  assertion    "
+                    + assertion.getFinalConfirm().toString());
+        }
+        if (test == null) {
+            System.out.println("6071  test == null    ");
+        }
+
         if (test instanceof ProgramParamExp) {
+            System.out
+                    .println("6076  if (test instanceof ProgramParamExp)    ");
+
             return invk_cond(((ProgramParamExp) test).getSemanticExp(),
                     assertion);
         }
         else if (test instanceof ProgramFunctionExp) {
+            System.out
+                    .println("6083  if (test instanceof ProgramFunctionExp)    ");
             Exp requires =
                     getRequiresForProgFuncExp(((ProgramFunctionExp) test),
                             assertion);
@@ -5412,6 +6170,9 @@ public class Verifier extends ResolveConceptualVisitor {
             return invk_cond(((ProgramDotExp) test).getSemanticExp(), assertion);
         }
 
+        System.out.println("6122  getTrueVarExp()    "
+                + getTrueVarExp().toString());
+        System.out.println("6123  Leaving     invk_cond");
         return getTrueVarExp();
     }
 
@@ -5808,7 +6569,6 @@ public class Verifier extends ResolveConceptualVisitor {
                     tmpMVD.setName(replCT.getName());
                     repl.setName(replCT.getName());
                     tEns = Exp.replace(tEns, old, repl);
-
                 }
             }
             if ((((QuantExp) ensures).getOperator() == QuantExp.FORALL)) {
@@ -6979,8 +7739,10 @@ public class Verifier extends ResolveConceptualVisitor {
 
         while ((j.hasNext() && k.hasNext()) || it.hasNext()) {
             conf = assertion.getFinalConfirm();
-
+            System.out.println("7691   replaceSimplePostConditionVariables");
             if (it.hasNext()) {
+                System.out
+                        .println("7694   replaceSimplePostConditionVariables");
                 AffectsItem stateVar = it.next();
                 if (stateVar.getMode() == Mode.UPDATES
                         || stateVar.getMode() == Mode.ALTERS
@@ -6994,7 +7756,8 @@ public class Verifier extends ResolveConceptualVisitor {
                     ConcType quesSV =
                             getIfInFreeVarList("?"
                                     + stateVar.getName().toString(), assertion);
-
+                    System.out
+                            .println("7488   replaceSimplePostConditionVariables");
                     if (quesSV == null) {
                         quesSV =
                                 new ConcType(
@@ -7017,6 +7780,8 @@ public class Verifier extends ResolveConceptualVisitor {
                 }
             }
             else {
+                System.out
+                        .println("7514   replaceSimplePostConditionVariables");
                 ParameterVarDec specVar = j.next();
                 ProgramExp realVar = k.next();
                 Exp specVarExp = null, replace = null;
@@ -7025,25 +7790,40 @@ public class Verifier extends ResolveConceptualVisitor {
 
                 undSpec.setName(createPosSymbol("_"
                         + specVar.getName().toString()));
+                ((VarExp) undSpec).setMathType(specVar.getMathType());
 
                 specVarExp = new VarExp();
                 oSpecVar = new OldExp();
                 oRealVar = new OldExp();
                 ((VarExp) specVarExp).setName(specVar.getName());
+                // NY
+                ((VarExp) specVarExp).setMathType(specVar.getMathType());
                 oSpecVar.setExp((Exp) Exp.clone(specVarExp));
                 replace = getReplacement(realVar, assertion);
                 oRealVar.setExp((Exp) Exp.clone(replace));
 
                 if (specVarExp != null && oSpecVar != null && replace != null) {
-
+                    System.out
+                            .println("7756   replaceSimplePostConditionVariables");
+                    System.out
+                            .println("7757   ensures   " + ensures.toString());
+                    System.out.println("7759   specVarExp   "
+                            + specVarExp.toString());
+                    System.out
+                            .println("7761   undSpec   " + undSpec.toString());
                     ensures = replace(ensures, specVarExp, undSpec);
+                    System.out
+                            .println("7765   replaceSimplePostConditionVariables");
+
                     ensures = replace(ensures, oSpecVar, undSpec);
+                    System.out
+                            .println("7769   replaceSimplePostConditionVariables");
                     undRepList.add(undSpec);
                     replList.add(replace);
                 }
             }
         }
-
+        System.out.println("7775   replaceSimplePostConditionVariables");
         Iterator<Exp> iUnd = undRepList.iterator();
         Iterator<Exp> iRepl = replList.iterator();
         while (iUnd.hasNext() && iRepl.hasNext()) {
@@ -7159,6 +7939,7 @@ public class Verifier extends ResolveConceptualVisitor {
 
     public void visitEBCodeRule(VerificationStatement code,
             AssertiveCode assertion) {
+        System.out.println("7900  Entring visitEBCodeRule");
         applyProofRulesToAssertiveCode((Statement) code.getAssertion(),
                 assertion);
         if (!(myInstanceEnvironment.flags.isFlagSet(FLAG_FINALVERB_VC) || myInstanceEnvironment.flags
@@ -7188,12 +7969,31 @@ public class Verifier extends ResolveConceptualVisitor {
         EnhancementModuleDec eDec =
                 (EnhancementModuleDec) myInstanceEnvironment.getModuleDec(eid);
 
+        List<UsesItem> list = eDec.getUsesItems();
+        list.addAll(dec.getUsesItems());
+
         VCBuffer.append("Enhancement Name: ");
         VCBuffer.append(eDec.getName().toString());
         VCBuffer.append("\n");
+        /* NY */
+        if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
+            Profile_EID = ModuleID.createPerformanceID(dec.getProfileName());
 
-        List<UsesItem> list = eDec.getUsesItems();
-        list.addAll(dec.getUsesItems());
+            PerformanceEModuleDec pEDec =
+                    (PerformanceEModuleDec) myInstanceEnvironment
+                            .getModuleDec(Profile_EID);
+
+            visitPerformance_Related_Names(pEDec, list);
+
+            visitPerformanceEModuleDec(pEDec);
+            list.addAll(pEDec.getUsesItems());
+
+            if (Profile_CName != null && pCPDec != null) {
+                visitPerformanceCModuleDec(pCPDec);
+                list.addAll(pCPDec.getUsesItems());
+            }
+        }
+
         ConceptModuleDec cDec =
                 (ConceptModuleDec) myInstanceEnvironment.getModuleDec(cid);
 
@@ -7882,7 +8682,7 @@ public class Verifier extends ResolveConceptualVisitor {
         dec.accept(this);
     }
 
-    //forms assertion from Procedure Declaration
+    //forms assertion from Procedure Declaration   
     public void visitProcedureDec(ProcedureDec dec) {
 
         AssertiveCode assertion = new AssertiveCode(myInstanceEnvironment);
@@ -8073,7 +8873,7 @@ public class Verifier extends ResolveConceptualVisitor {
 
         }
 
-        OperationDec curOperation = getCorOpDec(dec);
+        OperationDec curOperation = getCorOpDec(dec); // Heather - This is what we use to find the OperationDec/specification for the current procedure. We use this to get the ensures and requires clause
         if (curOperation == null) {
             return;
         }
@@ -8082,14 +8882,14 @@ public class Verifier extends ResolveConceptualVisitor {
             ensures = (Exp) Exp.clone(curOperation.getEnsures());
         }
 
-        requires = modifyRequiresByParameters(curOperation, assertion);
+        requires = modifyRequiresByParameters(curOperation, assertion); // Heather - we update the requires clause based on the parameter modes
 
         Exp globalConstr = addGlobalsAsFreeVariables(curOperation, assertion);
         requires =
-                modifyRequiresByGlobalMode(requires, curOperation, assertion);
+                modifyRequiresByGlobalMode(requires, curOperation, assertion);// Heather - we update the requiers mode based on global variables information
 
         /* Adds constraints of current context */
-        if (constraints != null) {
+        if (constraints != null) { // Heather - I think this is what is in the scoppe. What specifications we have access 
             if (thisConcept == true) {
                 // 		constraints = replace(constraints, exemplar, cExem);       		
                 OldExp oldExemplar = new OldExp(null, exemplar);
@@ -8130,14 +8930,14 @@ public class Verifier extends ResolveConceptualVisitor {
         Exp keepCorrespondence = null;
 
         /* Add the ensures clause to be confirmed*/
-        ensures = modifyEnsuresForProcedureDecRule(curOperation, dec);
+        ensures = modifyEnsuresForProcedureDecRule(curOperation, dec); // Heather - Gets the ensures for the current operation. We'll probably need one of these to get the duration
         if (ensures == null)
             ensures = getTrueVarExp();
 
-        ensures = modifyEnsuresByParameters(curOperation, assertion, ensures);
+        ensures = modifyEnsuresByParameters(curOperation, assertion, ensures); // Heather - modifies by the paremeter modes
         if (thisConcept == true) {
             if (exemplar != null) {
-                ensures = replace(ensures, exemplar, cExem);
+                ensures = replace(ensures, exemplar, cExem); // Heather - if you have exampler, you'd need to replace all instances of the exemplar with cExem in the duration. You may need to copy everything in this if
                 ensures =
                         replace(ensures, buildOldExp(exemplar),
                                 buildOldExp(cExem));
@@ -8184,7 +8984,7 @@ public class Verifier extends ResolveConceptualVisitor {
         }
         /* Adds requires assumption */
         if (requires != null) {
-            if (requires.getLocation() != null) {
+            if (requires.getLocation() != null) { //Heather - Location relates the VC with the line of code.
                 Location myLoc = requires.getLocation();
                 myLoc.setDetails("Requires Clause for "
                         + curOperation.getName());
@@ -8291,7 +9091,135 @@ public class Verifier extends ResolveConceptualVisitor {
             assertion.addAssume(keepCorrespondence);
         }
 
+        // NY ys - adding code for performance 
+        if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
+            // NY - Code for retrieving duration for the procedure (procDur) 
+            // NY - Code for creating duration VC (Cum_Dur <= Exp procDur)
+            // NY - Code for adding Com_Dur to Givens (Cum_Dur = 0.0)
+            if (moduleDec instanceof EnhancementBodyModuleDec) {
+                // Type cast to EnhancementBodyModuleDec
+                EnhancementBodyModuleDec ebmd =
+                        (EnhancementBodyModuleDec) moduleDec;
+
+                // Retrieve the scope repository containing all the scopes
+                ScopeRepository sr =
+                        myRealSymbolTable.getScope(ebmd).getSourceRepository();
+                try {
+                    // Retrieve the scope identifier for the performance
+                    // profiles.
+                    ModuleIdentifier mi =
+                            sr.getModuleScope(
+                                    new ModuleIdentifier(ebmd.getProfileName()
+                                            .getName())).getModuleIdentifier();
+
+                    // Retrieve the scope with the module identifier specified.
+                    ModuleScopeBuilder msb =
+                            myRealSymbolTable.getModuleScope(mi);
+
+                    // Retrieve the OperationProfileEntry for this ProcedureDec
+                    try {
+                        OperationProfileEntry ope =
+                                ((OperationProfileEntry) msb
+                                        .queryForOne(new NameQuery(null, dec
+                                                .getName())));
+                        procDur = ope.getDurationClause();
+                        procDur.setMathType(ope.getDurationClause()
+                                .getMathType());
+
+                        PosSymbol opName_lessEq = createPosSymbol("<=");
+                        Cum_Dur = CreateRealExp("Cum_Dur");
+
+                        // Add Cum_Dur = 0.0 in Givens.
+                        Exp left = null;
+                        left = CreateRealExp("Cum_Dur = 0.0");
+                        left.setMathType(myTypeGraph.R);
+                        assertion.addAssume(left);
+
+                        // NY - Code for creating duration VC (Cum_Dur <= Exp procDur)
+                        Cum_Dur =
+                                new InfixExp(dec.getLocation(), Cum_Dur,
+                                        opName_lessEq, procDur);
+                        Cum_Dur.setMathType(myTypeGraph.R);
+                        System.out.println("9090   Cum_Dur "
+                                + Cum_Dur.toString() + " \n");
+                    }
+                    catch (NoSuchSymbolException nsse) {
+                        noSuchSymbol(null, dec.getName().getName(), dec
+                                .getLocation());
+                    }
+                    catch (DuplicateSymbolException dse) {
+                        //This should be caught earlier, when the duplicate operation is
+                        //created
+                        throw new RuntimeException(dse);
+                    }
+
+                }
+                catch (NoSuchSymbolException ex) {
+                    noSuchSymbol(null, ebmd.getProfileName().getName(), ebmd
+                            .getLocation());
+                }
+            }
+
+            // NY - add duration VC to assertive code
+            if (procDur != null && Cum_Dur != null) {
+                PosSymbol opName_and = createPosSymbol("and");
+                ensures =
+                        new InfixExp(ensures.getLocation(), ensures,
+                                opName_and, Cum_Dur);
+                ensures.setMathType(myTypeGraph.BOOLEAN);
+            }
+            // NY Develop the duration expression to finalize a variable (F_Dur(Entry))      
+            Iterator<VarDec> itV = dec.getVariables().iterator();
+            while (itV.hasNext()) {
+                String LocalVar = "";
+                VarDec mydec1 = itV.next();
+                LocalVar = mydec1.getName().toString();
+
+                // NY Temp fix! of ignoring '_' 
+                if (LocalVar.charAt(0) != '_') {
+                    Exp finalDur = null;
+                    PosSymbol opName_add = createPosSymbol("+");
+                    Exp oldexp = CreateRealExp("Cum_Dur");
+                    Exp newexp = null;
+
+                    Ty varTy = mydec1.getTy();
+                    NameTy varNameTy = (NameTy) varTy;
+                    TypeID typeID = new TypeID(varNameTy.getName().getSymbol());
+                    ModuleScope curr = table.getModuleScope();
+                    TypeHolder typeHold = curr.getTypeHolder();
+                    Type vnType = typeHold.searchForType(typeID);
+                    if (vnType instanceof ConcType) {
+                        Iterator<Dec> ip = pCPDec.getDecs().iterator();
+                        while (ip.hasNext()) {
+                            Dec tmp = ip.next();
+                            if (tmp instanceof PerformanceTypeDec) {
+                                perfFinalItem =
+                                        ((PerformanceTypeDec) tmp)
+                                                .getPerf_Finalization();
+                                finalDur = perfFinalItem.getDuration();
+                            }
+                        }
+                    }
+                    else {
+                        finalDur = FinalizAnyDur(mydec1);
+                    }
+                    newexp =
+                            new InfixExp(dec.getLocation(), oldexp, opName_add,
+                                    finalDur);
+                    newexp.setMathType(myTypeGraph.R);
+
+                    System.out.println("9159   ensures " + ensures.toString()
+                            + " \n");
+                    ensures = replace(ensures, oldexp, newexp);
+                    System.out.println("9162   ensures " + ensures.toString()
+                            + " \n");
+                    ensures.setMathType(myTypeGraph.BOOLEAN);
+                }
+            }
+        }
+
         if (ensures != null) {
+            // Heather - somewhere before this. Generate the duration Exp, then use TypeGraph.formConjunct to combine this ensures and the new duration for the final ensures
             assertion.setFinalConfirm(ensures);
         }
 
@@ -8326,6 +9254,18 @@ public class Verifier extends ResolveConceptualVisitor {
             }
             else if (dec instanceof FacilityDec) {
                 visitFacilityDec((FacilityDec) dec);
+            }
+            // --NY
+            else if (dec instanceof PerformanceOperationDec) {
+                visitPerformanceOperationDec((PerformanceOperationDec) dec);
+            }
+            // --NY
+            else if (dec instanceof PerformanceEModuleDec) {
+                //        visitPerformanceOperationDec((PerformanceOperationDec) dec);
+            }
+            // --NY
+            else if (dec instanceof PerformanceCModuleDec) {
+                //       System.out.println("visitProcedures -> PerformanceCModuleDec");
             }
         }
     }
@@ -8684,6 +9624,353 @@ public class Verifier extends ResolveConceptualVisitor {
             if (!checkImportDup(importStr)) {
                 usesItemBuf.append(importStr);
                 importList.addUnique(importStr);
+            }
+        }
+    }
+
+    // --NY added for Performance
+    public void visitPerformance_Related_Names(PerformanceEModuleDec dec1,
+            List<UsesItem> list) {
+
+        Profile_Name = dec1.getName();
+        VCBuffer.append("Profile Name:\t");
+        VCBuffer.append(Profile_Name.toString());
+        VCBuffer.append("\n");
+
+        // YS - Check to see if we have the profile's concept name and its
+        //      associated profile.
+        if (dec1.getProfilecName() != null) {
+            Profile_CName = dec1.getProfilecName();
+            VCBuffer.append("Profile's Concept Name:\t");
+            VCBuffer.append(Profile_CName.toString());
+            VCBuffer.append("\n");
+
+            Profile_CPName = dec1.getProfilecpName();
+            VCBuffer.append("Profile Concept's Profile Name:\t");
+            VCBuffer.append(Profile_CPName.toString());
+            VCBuffer.append("\n");
+
+            if (Profile_CPName != null) {
+                Profile_CP_ID = ModuleID.createPerformanceID(Profile_CPName);
+                pCPDec =
+                        (PerformanceCModuleDec) myInstanceEnvironment
+                                .getModuleDec(Profile_CP_ID);
+                list.addAll(pCPDec.getUsesItems());
+            }
+
+            VCBuffer.append("Performance Operation Name: Need to be fixed\t");
+            VCBuffer.append(dec1.getName().toString());
+            VCBuffer.append("\n");
+        }
+    }
+
+    // --NY   added for Performance
+    public void visitPerformanceCModuleDec(PerformanceCModuleDec dec1) {
+        table.beginModuleScope();
+        //   visitProcedures(dec1.getDecs());
+        table.endModuleScope();
+    }
+
+    // --NY   added for Performance
+    public void visitPerformanceEModuleDec(PerformanceEModuleDec dec1) {
+        table.beginModuleScope();
+        // YS - Check to see if we have concept performance profile or a enhancement performance profile
+        ModuleID cid;
+        if (dec1.getProfilecpName() == null) {
+            dec1.setProfilecName(dec1.getProfileName3());
+            cid =
+                    ModuleID.createProfileID(dec1.getProfileName1(), dec1
+                            .getProfileName2(), new PosSymbol(), dec1
+                            .getProfilecName(), new PosSymbol());
+        }
+        else {
+            cid =
+                    ModuleID.createProfileID(dec1.getProfileName1(), dec1
+                            .getProfileName2(), dec1.getProfileName3(), dec1
+                            .getProfilecName(), dec1.getProfilecpName());
+        }
+
+        typeParms = getPerfTypeParms(cid);
+        //   concParms = getConcParms(cid);
+
+        //--NY
+        //       visitPerformanceInitItem(dec1.getPerfInit());
+        //        visitPerformanceFinalItem(dec1.getPerfFinal());
+
+        // NY DO NOT DELETE THIS!
+        visitProcedures(dec1.getDecs());
+
+        table.endModuleScope();
+    }
+
+    // --NY added for Performance
+    public void visitPerformanceInitItem(PerformanceInitItem item) {
+        if (item != null) {
+            System.out.println("9657  Perf_Initialization: "
+                    + item.getDuration().toString());
+        }
+        else {
+            System.out.println("9659  Perf_Initialization: is null");
+        }
+    }
+
+    // --NY added for Performance
+    public void visitPerformanceFinalItem(PerformanceFinalItem item) {
+        if (item != null) {
+            System.out.println("9668   Perf_Finalization: "
+                    + item.getDuration().toString());
+        }
+        else {
+            System.out.println("9671  Perf_Finalization: is null");
+        }
+    }
+
+    // --NY added for Performance
+    public void visitPerformanceOperationDec(PerformanceOperationDec dec) {
+
+    }
+
+    public void noSuchSymbol(PosSymbol qualifier, String symbolName, Location l) {
+
+        String message;
+
+        if (qualifier == null) {
+            message = "No such symbol: " + symbolName;
+        }
+        else {
+            message =
+                    "No such symbol in module: " + qualifier.getName() + "."
+                            + symbolName;
+        }
+
+        throw new SourceErrorException(message, l);
+    }
+
+    //NY Create duration expression to initialized a local variable
+    public FunctionExp IniatialDur(VarDec var) {
+        FunctionExp InitDurExp = new FunctionExp();
+        VarExp param = new VarExp();
+        List<Exp> params = new List<Exp>();
+        FunctionArgList fAL = new FunctionArgList();
+        List<FunctionArgList> faList = new List<FunctionArgList>();
+
+        param.setName(createPosSymbol(((NameTy) var.getTy()).getName()
+                .toString()));
+
+        param.setType(getTypeFromTy(var.getTy()));
+
+        param.setMathType(var.getTy().getMathTypeValue());
+
+        InitDurExp.setName(createPosSymbol("I_Dur"));
+        InitDurExp.setType(BooleanType.INSTANCE);
+        InitDurExp.setMathType(BOOLEAN);
+
+        params.add(param);
+        fAL.setArguments(params);
+
+        faList.add(fAL);
+        InitDurExp.setParamList(faList);
+
+        return InitDurExp;
+    }
+
+    //NY Create duration expression to finalize an initial valued local variable
+    public FunctionExp FinalizIniatialDur(VarDec var) {
+        FunctionExp FinalDurExp = new FunctionExp();
+        VarExp param = new VarExp();
+        List<Exp> params = new List<Exp>();
+        FunctionArgList fAL = new FunctionArgList();
+        List<FunctionArgList> faList = new List<FunctionArgList>();
+
+        //    param.setName(createPosSymbol(var.getName().toString()));
+        param.setName(createPosSymbol(((NameTy) var.getTy()).getName()
+                .toString()));
+
+        param.setType(getTypeFromTy(var.getTy()));
+
+        param.setMathType(var.getTy().getMathTypeValue());
+
+        FinalDurExp.setName(createPosSymbol("F_IV_Dur"));
+        FinalDurExp.setType(BooleanType.INSTANCE);
+        FinalDurExp.setMathType(BOOLEAN);
+
+        params.add(param);
+        fAL.setArguments(params);
+
+        faList.add(fAL);
+        FinalDurExp.setParamList(faList);
+
+        return FinalDurExp;
+    }
+
+    //NY Create duration expression to finalize any local variable
+    public FunctionExp FinalizAnyDur(VarDec var) {
+        FunctionExp FinalDurAnyExp = new FunctionExp();
+        VarExp param = new VarExp();
+        List<Exp> params = new List<Exp>();
+        FunctionArgList fAL = new FunctionArgList();
+        List<FunctionArgList> faList = new List<FunctionArgList>();
+
+        param.setName(createPosSymbol(var.getName().toString()));
+        //   param.setName(createPosSymbol(((NameTy) var.getTy()).getName()
+        //           .toString()));
+
+        param.setType(getTypeFromTy(var.getTy()));
+
+        param.setMathType(var.getTy().getMathTypeValue());
+
+        FinalDurAnyExp.setName(createPosSymbol("F_Dur"));
+        FinalDurAnyExp.setType(BooleanType.INSTANCE);
+        FinalDurAnyExp.setMathType(BOOLEAN);
+
+        params.add(param);
+        fAL.setArguments(params);
+
+        faList.add(fAL);
+        FinalDurAnyExp.setParamList(faList);
+
+        return FinalDurAnyExp;
+    }
+
+    //NY Create duration expression to finalize any local variable
+    private Exp AddInitDur(VarDec varDec, AssertiveCode assertion) {
+        PosSymbol opName_AddDur = createPosSymbol("+");
+
+        Exp InitalDur = IniatialDur(varDec);
+
+        Exp conf = assertion.getFinalConfirm();
+
+        Exp oldexp = null;
+        Exp newexp = null;
+        oldexp = CreateRealExp("Cum_Dur");
+        newexp =
+                new InfixExp(oldexp.getLocation(), oldexp, opName_AddDur,
+                        InitalDur);
+        newexp.setMathType(myTypeGraph.R);
+
+        conf = replace(conf, oldexp, newexp);
+        conf.setMathType(myTypeGraph.BOOLEAN);
+        return conf;
+    }
+
+    //NY Create duration expression as Cum_Dur or Cum_Dur = 0.0, etc.
+    public VarExp CreateRealExp(String str) {
+        VarExp varexp = new VarExp();
+
+        PosSymbol tmp = new PosSymbol();
+        tmp.setSymbol(Symbol.symbol(str));
+
+        varexp.setName(tmp);
+        varexp.setMathType(myTypeGraph.R);
+
+        return varexp;
+    }
+
+    //NY 
+    /* Check for EVALUATES mode.
+     * If true, create local variables for EVALUATES mode 
+     */
+    public Boolean CheckEvalMode(AssertiveCode assertion, OperationDec myDec,
+            List<VarDec> EvalVar) {
+        Boolean evalutesMode = false;
+        VerificationStatement curAssertion = null;
+
+        Iterator<ParameterVarDec> paramIter =
+                ((OperationDec) myDec).getParameters().iterator();
+
+        List<ParameterVarDec> paramsRea = new List<ParameterVarDec>();
+        while (paramIter.hasNext()) {
+            ParameterVarDec tmpPVD = paramIter.next();
+            if (tmpPVD != null) {
+                paramsRea.add(tmpPVD);
+            }
+            if (tmpPVD.getMode() == Mode.EVALUATES) {
+                evalutesMode = true;
+
+                // NY -- Create a variable for the evaluates mode 
+                System.out.println("9839   tmpPVD.getName() = "
+                        + tmpPVD.getName().toString());
+                VarDec var = new VarDec();
+                var.setName(tmpPVD.getName());
+                var.setTy(tmpPVD.getTy());
+                var.setMathType(tmpPVD.getMathType());
+                System.out.println("9845   var = " + var.getName().toString());
+                assertion.addVariableDec(var);
+                EvalVar.add(var);
+
+                curAssertion = assertion.getLastAssertion();
+                if (curAssertion.getType() == VerificationStatement.VARIABLE) {
+                    applyVariableDeclRule(curAssertion, assertion);
+                }
+            }
+        }
+        return evalutesMode;
+    }
+
+    //NY Add duration expression to the confirm clause.
+    public void AddDurConfirm(String operationName, AssertiveCode assertion) {
+        OperationDec opDec = null;
+
+        System.out.println("9861  operationName " + operationName);
+
+        // NY Find the current concept 
+        Scope current = table.getCurrentScope();
+        ScopeID sid = current.getScopeID();
+        ModuleID mid = sid.getModuleID();
+        ModuleID cid = mid.getConceptID();
+        if (cid != null && cid.getName() != null) {
+            conceptDec =
+                    (ConceptModuleDec) myInstanceEnvironment.getModuleDec(cid);
+        }
+
+        if (conceptDec != null) {
+            List<Dec> decs = conceptDec.getDecs();
+            Iterator<Dec> decIt = decs.iterator();
+            while (decIt.hasNext()) {
+                Dec myDec = decIt.next();
+                /* NY 
+                 * Find the operation name from the concept and compare with the 
+                 * operation name from the function call */
+                if (myDec instanceof OperationDec
+                        && myDec.getName().toString() == operationName) {
+                    opDec = (OperationDec) myDec;
+
+                    // NY Duration for the function
+                    //      if (myInstanceEnvironment.flags
+                    //              .isFlagSet(Verifier.FLAG_PERF_VC)) {
+                    Iterator<Dec> ip = pCPDec.getDecs().iterator();
+                    PosSymbol opName_AddDur = createPosSymbol("+");
+                    while (ip.hasNext()) {
+                        Dec tmp1 = ip.next();
+                        if (tmp1 instanceof PerformanceOperationDec) {
+                            if (tmp1.getName().toString() == operationName) {
+                                Exp OpDur =
+                                        ((PerformanceOperationDec) tmp1)
+                                                .getDuration();
+                                System.out.println(" 9898 OpDur = "
+                                        + OpDur.toString());
+
+                                Exp conf1 = assertion.getFinalConfirm();
+                                Exp oldexp = null;
+                                Exp newexp = null;
+                                oldexp = CreateRealExp("Cum_Dur");
+                                newexp =
+                                        new InfixExp(oldexp.getLocation(),
+                                                oldexp, opName_AddDur, OpDur);
+                                newexp.setMathType(myTypeGraph.R);
+                                System.out.println(" 9910 conf1 = "
+                                        + conf1.toString());
+
+                                conf1 = replace(conf1, oldexp, newexp);
+                                conf1.setMathType(myTypeGraph.BOOLEAN);
+                                System.out.println(" 9915 conf1 = "
+                                        + conf1.toString());
+                                assertion.setFinalConfirm(conf1);
+                            }
+                        }
+                    }
+                    // }
+                }
             }
         }
     }
