@@ -4284,7 +4284,6 @@ public class Verifier extends ResolveConceptualVisitor {
             else {
                 return exp;
             }
-			System.out.println("4246  tmp = " + tmp.toString());
         }
         else if (exp instanceof ProgramDoubleExp) {
             return exp;
@@ -9666,41 +9665,41 @@ public class Verifier extends ResolveConceptualVisitor {
 
     // --NY   added for Performance
     public void visitPerformanceCModuleDec(PerformanceCModuleDec dec1) {
-        table.beginModuleScope();
-        //   visitProcedures(dec1.getDecs());
-        table.endModuleScope();
+    //table.beginModuleScope();
+    //   visitProcedures(dec1.getDecs());
+    //table.endModuleScope();
     }
 
     // --NY   added for Performance
     public void visitPerformanceEModuleDec(PerformanceEModuleDec dec1) {
-        table.beginModuleScope();
-        // YS - Check to see if we have concept performance profile or a enhancement performance profile
-        ModuleID cid;
-        if (dec1.getProfilecpName() == null) {
-            dec1.setProfilecName(dec1.getProfileName3());
-            cid =
-                    ModuleID.createProfileID(dec1.getProfileName1(), dec1
-                            .getProfileName2(), new PosSymbol(), dec1
-                            .getProfilecName(), new PosSymbol());
-        }
-        else {
-            cid =
-                    ModuleID.createProfileID(dec1.getProfileName1(), dec1
-                            .getProfileName2(), dec1.getProfileName3(), dec1
-                            .getProfilecName(), dec1.getProfilecpName());
-        }
+    /*table.beginModuleScope();
+    // YS - Check to see if we have concept performance profile or a enhancement performance profile
+    ModuleID cid;
+    if (dec1.getProfilecpName() == null) {
+        dec1.setProfilecName(dec1.getProfileName3());
+        cid =
+                ModuleID.createProfileID(dec1.getProfileName1(), dec1
+                        .getProfileName2(), new PosSymbol(), dec1
+                        .getProfilecName(), new PosSymbol());
+    }
+    else {
+        cid =
+                ModuleID.createProfileID(dec1.getProfileName1(), dec1
+                        .getProfileName2(), dec1.getProfileName3(), dec1
+                        .getProfilecName(), dec1.getProfilecpName());
+    }
 
-        typeParms = getPerfTypeParms(cid);
-        //   concParms = getConcParms(cid);
+    typeParms = getPerfTypeParms(cid);
+    //   concParms = getConcParms(cid);
 
-        //--NY
-        //       visitPerformanceInitItem(dec1.getPerfInit());
-        //        visitPerformanceFinalItem(dec1.getPerfFinal());
+    //--NY
+    //       visitPerformanceInitItem(dec1.getPerfInit());
+    //        visitPerformanceFinalItem(dec1.getPerfFinal());
 
-        // NY DO NOT DELETE THIS!
-        visitProcedures(dec1.getDecs());
+    // NY DO NOT DELETE THIS!
+    visitProcedures(dec1.getDecs());
 
-        table.endModuleScope();
+    table.endModuleScope(); */
     }
 
     // --NY added for Performance

@@ -263,6 +263,18 @@ public class OldPopulator extends ResolveConceptualVisitor {
         table.createShortFacility(dec.getName());
     }
 
+    public void visitPerformanceCModuleDec(PerformanceCModuleDec dec) {
+        visitUsesItemList(dec.getUsesItems());
+        visitDecList(dec.getDecs());
+        table.completeModuleScope();
+    }
+
+    public void visitPerformanceEModuleDec(PerformanceEModuleDec dec) {
+        visitUsesItemList(dec.getUsesItems());
+        visitDecList(dec.getDecs());
+        table.completeModuleScope();
+    }
+
     // -----------------------------------------------------------
     // Variable Declarations
     // -----------------------------------------------------------
@@ -521,6 +533,7 @@ public class OldPopulator extends ResolveConceptualVisitor {
         //                       .getExemplar(), type);
         //       table.addVariableToScope(ex);
         //       visitExp(dec.getConstraint());
+        table.createTypeScope();
         if (dec.getPerf_Initialization() != null) {
             visitPerformanceInitItem(dec.getPerf_Initialization());
         }
