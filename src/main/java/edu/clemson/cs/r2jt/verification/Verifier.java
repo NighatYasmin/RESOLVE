@@ -87,6 +87,9 @@ public class Verifier extends ResolveConceptualVisitor {
     private boolean isInInterface = false;
 
     // NY This expression holds the duration
+    //    private Boolean IsRecursiveCall = false;
+    //    private String recursiveOpName = null;
+    //    private String recursiveCounter = null;
     private Exp Cum_Dur = null;
     private Exp Cum_Dur1 = null;
     private Exp procDur = null;
@@ -474,7 +477,11 @@ public class Verifier extends ResolveConceptualVisitor {
                 tmpVarExp.setName(tmp.getName());
 
                 VarExp repVarExp = new VarExp();
+                System.out.println("480   finalConf " + finalConf.toString()
+                        + " \n");
                 tmp = NQV(finalConf, tmp, assertion);
+                System.out.println("482   finalConf " + finalConf.toString()
+                        + " \n");
                 repVarExp.setName(tmp.getName());
 
                 MTType tmpType = MTType.fromOldType(tmp, myRealSymbolTable);
@@ -638,10 +645,10 @@ public class Verifier extends ResolveConceptualVisitor {
                                     new OperationProfileQuery(null, stmt
                                             .getName(), argTypes));
 
-                    opduration = opName.getDurationClause();
                     System.out.println("687 Op name = "
                             + opName.getName().toString());
-                    System.out.println("689 opduration = "
+                    opduration = opName.getDurationClause();
+                    System.out.println("650   opduration  = "
                             + opduration.toString());
                     performanceEnsure = opName.getEnsuresClause();
                 }
@@ -698,11 +705,14 @@ public class Verifier extends ResolveConceptualVisitor {
                         .getParameters())
                 && ((ProcedureDec) tmp).getDecreasing() != null) {
 
+            //      IsRecursiveCall = true;
+            //       recursiveCounter = ((ProcedureDec) tmp).getDecreasing().toString();
             VarExp var = new VarExp();
             ConcType pval = getPVAL();
 
             var.setName(pval.getName());
             var.setMathType(Z);
+            System.out.println("770    var = " + var.toString());
 
             InfixExp PExp = new InfixExp();
             PExp.setLeft((Exp) Exp.clone(((ProcedureDec) tmp).getDecreasing()));
@@ -714,9 +724,11 @@ public class Verifier extends ResolveConceptualVisitor {
             if (((ProcedureDec) tmp).getDecreasing().getLocation() != null) {
                 Location loc =
                         ((ProcedureDec) tmp).getDecreasing().getLocation();
-                loc.setDetails("Show Termination of Recursive Call");
+                loc.setDetails("Show Termination of Recursive Call ");
                 setLocation(PExp, loc);
             }
+            System.out.println("767    PExp = " + PExp.toString());
+
             conf.setAssertion(PExp);
             assertion.addCode(conf);
         }
@@ -798,6 +810,46 @@ public class Verifier extends ResolveConceptualVisitor {
 
         // NY Add duration to the assertion
         if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
+
+            /*  if ((opName.getName().toString() == recursiveOpName)
+                      && (IsRecursiveCall == true)) {
+                  Exp left = null;
+                  Exp right = null;
+                  Exp right1 = null;
+                  Exp tmpny = null;
+                  right = ((InfixExp) opduration).getRight();
+                  left = ((InfixExp) opduration).getLeft();
+                  System.out.println("875   left  = " + left.toString());
+                  System.out.println("876   right  = " + right.toString());
+                  tmpny = CreateRealExp(recursiveCounter);
+                  System.out.println("877   tmpny  = " + tmpny.toString());
+                  while (left.toString() == tmpny.toString()) {
+                      if (left.toString() != tmpny.toString()) {
+                          right1 = right;
+                          System.out.println("653   right1  = " + right1);
+                          right = ((InfixExp) right1).getRight();
+                          left = ((InfixExp) right1).getLeft();
+                          System.out.println("651   left  = " + left.toString());
+                      }
+                      else {
+                          return;
+                      }
+                  }
+                  opduration = right;
+                  System.out.println("654   left  = " + left.toString());
+                  System.out.println("655   opduration  = "
+                          + opduration.toString());
+                  PosSymbol opName_Multiply = createPosSymbol("*");
+                  Exp durRecursive = null;
+                  durRecursive = CreateRealExp("(" + recursiveCounter + " - 1)");
+                  System.out.println("900   tmpny  = " + tmpny.toString());
+                  System.out.println("901   durRecursive  = "
+                          + durRecursive.toString());
+                  opduration = replace(opduration, tmpny, durRecursive);
+                  System.out.println("903   opduration  = "
+                          + opduration.toString());
+              }  */
+
             Location loc = (Location) stmt.getName().getLocation().clone();
             Dec myDec = getCurrentProcedure();
             String details = "";
@@ -1293,6 +1345,23 @@ public class Verifier extends ResolveConceptualVisitor {
                 applySimplificationRules(assertion);
         }
         assertion.setName(name);
+
+        if (myInstanceEnvironment.flags.isFlagSet(Verifier.FLAG_PERF_VC)) {
+            Exp conf = assertion.getFinalConfirm();
+
+            Exp oldexp = null;
+            oldexp = CreateRealExp("procDur");
+
+            System.out.println("1415   conf = " + conf.toString());
+            System.out.println("1416   oldexp = " + oldexp.toString());
+            System.out.println("1417   procDur = " + procDur.toString());
+            conf = replace(conf, oldexp, procDur);
+            conf.setMathType(myTypeGraph.BOOLEAN);
+            System.out.println("1419   conf = " + conf.toString());
+
+            assertion.setFinalConfirm(conf);
+        }
+
         myFinalVCs.add(assertion);
         assrtBuf.append(assertion.assertionToString(true) + "\n\n");
         return;
@@ -5268,7 +5337,11 @@ public class Verifier extends ResolveConceptualVisitor {
         if (stmt.getDecreasing() == null)
             return inv;
         ConcType pval = getPVAL();
+        System.out.println("5383   finalConf "
+                + assertion.getFinalConfirm().toString() + " \n");
         pval = NQV(assertion.getFinalConfirm(), pval, assertion);
+        System.out.println("5385   finalConf "
+                + assertion.getFinalConfirm().toString() + " \n");
         assertion.addFreeVar(pval);
         assertion.addFreeVar(pval);
         var.setName(pval.getName());
@@ -5276,6 +5349,7 @@ public class Verifier extends ResolveConceptualVisitor {
         PExp.setOperator(EqualsExp.EQUAL);
         PExp.setLeft((Exp) Exp.clone(var));
         PExp.setRight((Exp) Exp.clone((stmt.getDecreasing())));
+        System.out.println("5386  PExp = " + PExp.toString());
         assume.setOpName(createPosSymbol("and"));
         assume.setRight(PExp);
         assume.setType(BooleanType.INSTANCE);
@@ -5293,7 +5367,11 @@ public class Verifier extends ResolveConceptualVisitor {
         if (stmt.getDecreasing() == null)
             return inv;
         ConcType pval = getPVAL();
+        System.out.println("5412   finalConf "
+                + assertion.getFinalConfirm().toString() + " \n");
         pval = NQV(assertion.getFinalConfirm(), pval, assertion);
+        System.out.println("5414   finalConf "
+                + assertion.getFinalConfirm().toString() + " \n");
         assertion.addFreeVar(pval);
         var.setName(pval.getName());
         var.setMathType(Z);
@@ -5305,6 +5383,7 @@ public class Verifier extends ResolveConceptualVisitor {
         assume.setType(BooleanType.INSTANCE);
         assume.setMathType(BOOLEAN);
         assume.setRight(PExp);
+        System.out.println("5416  PExp = " + PExp.toString());
 
         return assume;
     }
@@ -5958,6 +6037,8 @@ public class Verifier extends ResolveConceptualVisitor {
             return inv;
 
         ConcType pval = getPVAL();
+        System.out.println("6080   finalConf "
+                + assertion.getFinalConfirm().toString() + " \n");
         pval = NQV(assertion.getFinalConfirm(), pval, assertion);
         var.setName(pval.getName());
         var.setType(pval.getType());
@@ -6021,7 +6102,11 @@ public class Verifier extends ResolveConceptualVisitor {
 
         VarExp var = new VarExp();
         ConcType pval = getPVAL();
+        System.out.println("6145   finalConf "
+                + assertion.getFinalConfirm().toString() + " \n");
         pval = NQV(assertion.getFinalConfirm(), pval, assertion);
+        System.out.println("6147   finalConf "
+                + assertion.getFinalConfirm().toString() + " \n");
         assertion.addFreeVar(pval);
 
         var.setName(pval.getName());
@@ -8566,6 +8651,8 @@ public class Verifier extends ResolveConceptualVisitor {
 
         /* If Procedure is recursive, add P_Val = (decreasing clause) assumption */
         if (dec.getDecreasing() != null) {
+            //            IsRecursiveCall = true;
+            //            recursiveCounter = dec.getDecreasing().toString();
             VarExp pval = new VarExp();
             ConcType pVAL = getPVAL();
             assertion.addFreeVar(pVAL);
@@ -9060,6 +9147,8 @@ public class Verifier extends ResolveConceptualVisitor {
 
         /* If Procedure is recursive, add P_Val = (decreasing clause) assumption */
         if (dec.getDecreasing() != null) {
+            //            IsRecursiveCall = true;
+            //            recursiveCounter = dec.getDecreasing().toString();
             VarExp pval = new VarExp();
             ConcType pVAL = getPVAL();
             assertion.addFreeVar(pVAL);
@@ -9123,9 +9212,13 @@ public class Verifier extends ResolveConceptualVisitor {
                                                 .getName())));
                         procDur = ope.getDurationClause();
                         procDur.setMathType(ope.getDurationClause()
-                                .getMathType());
+                                .getMathType());                    
 
+                // NY Add the ensure clause to the Given for the VC
+               //  assertion.addAssume(procDur);
+            
                         PosSymbol opName_lessEq = createPosSymbol("<=");
+                     //   Exp procDur1 = CreateRealExp("procDur");
                         Cum_Dur = CreateRealExp("Cum_Dur");
 
                         // Add Cum_Dur = 0.0 in Givens.
@@ -9135,12 +9228,24 @@ public class Verifier extends ResolveConceptualVisitor {
                         assertion.addAssume(left);
 
                         // NY - Code for creating duration VC (Cum_Dur <= Exp procDur)
-                        Cum_Dur =
-                                new InfixExp(dec.getLocation(), Cum_Dur,
-                                        opName_lessEq, procDur);
+                        Location cumdur_loc =
+                                (Location) dec.getLocation().clone();
+                        cumdur_loc.setDetails("Duration clause of "
+                                + dec.getName());
+                        //                        recursiveOpName = dec.getName().toString();
+                        //                        System.out.println("9147   recursiveOpName     "
+                        //                                + recursiveOpName + " \n");
+                           Cum_Dur =
+                                    new InfixExp(cumdur_loc, Cum_Dur,
+                                            opName_lessEq, procDur);
+
+                    //    Cum_Dur =
+                    //            new InfixExp(cumdur_loc, Cum_Dur,
+                    //                    opName_lessEq, procDur1);
                         Cum_Dur.setMathType(myTypeGraph.R);
-                        System.out.println("9090   Cum_Dur "
+                        System.out.println("9286   Cum_Dur "
                                 + Cum_Dur.toString() + " \n");
+
                     }
                     catch (NoSuchSymbolException nsse) {
                         noSuchSymbol(null, dec.getName().getName(), dec

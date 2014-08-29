@@ -804,6 +804,7 @@ public class Analyzer extends ResolveConceptualVisitor {
                     .isFlagSet(PrettyJavaTranslator.FLAG_TRANSLATE)) {
                 // Making sure that we do not have something of VariableExp on the right hand side
                 // in a function assignment. - YS
+                /*0
                 if (petr.isVariable(stmt.getAssign())) {
                     String msg =
                             "Right hand side of the function assignment cannot be a variable expression! ";
@@ -815,7 +816,7 @@ public class Analyzer extends ResolveConceptualVisitor {
                 // defined for that type. - YS
                 if (stmt.getAssign() instanceof ProgramParamExp) {
                     stmt.getAssign().accept(this);
-                }
+                }*/
             }
         }
         catch (TypeResolutionException trex) {
