@@ -46,7 +46,7 @@
                 <goal>org.codehaus.mojo:exec-maven-plugin:1.2.1:exec</goal>
             </goals>
             <properties>
-                <exec.args>-classpath %classpath edu.clemson.cs.r2jt.Main -PVCs  -verbose  Do_Nothing_Realiz_LT.rb</exec.args>
+                <exec.args>-classpath %classpath edu.clemson.cs.r2jt.Main -PVCs  Append_Realiz.rb</exec.args>
                 <exec.executable>java</exec.executable>
                 <exec.workingdir>C:\Users\yasmin\Desktop\0-RESOLVE\RESOLVE-Workspace\RESOLVE\Main\Concepts\Preemptable_Queue_Template</exec.workingdir>
             </properties>
@@ -58,7 +58,7 @@
                 <goal>org.codehaus.mojo:exec-maven-plugin:1.2.1:exec</goal>
             </goals>
             <properties>
-                <exec.args>-Xdebug -Xrunjdwp:transport=dt_socket,server=n,address=${jpda.address} -classpath %classpath edu.clemson.cs.r2jt.Main -PVCs  -verbose  Do_Nothing_Realiz_LT.rb</exec.args>
+                <exec.args>-Xdebug -Xrunjdwp:transport=dt_socket,server=n,address=${jpda.address} -classpath %classpath edu.clemson.cs.r2jt.Main -PVCs  Append_Realiz.rb</exec.args>
                 <exec.executable>java</exec.executable>
                 <jpda.listen>true</jpda.listen>
                 <exec.workingdir>C:\Users\yasmin\Desktop\0-RESOLVE\RESOLVE-Workspace\RESOLVE\Main\Concepts\Preemptable_Queue_Template</exec.workingdir>
@@ -71,7 +71,7 @@
                 <goal>org.codehaus.mojo:exec-maven-plugin:1.2.1:exec</goal>
             </goals>
             <properties>
-                <exec.args>-classpath %classpath edu.clemson.cs.r2jt.Main -PVCs  -verbose  Do_Nothing_Realiz_LT.rb</exec.args>
+                <exec.args>-classpath %classpath edu.clemson.cs.r2jt.Main -PVCs  Append_Realiz.rb</exec.args>
                 <exec.executable>${profiler.java}</exec.executable>
                 <exec.workingdir>C:\Users\yasmin\Desktop\0-RESOLVE\RESOLVE-Workspace\RESOLVE\Main\Concepts\Preemptable_Queue_Template</exec.workingdir>
             </properties>

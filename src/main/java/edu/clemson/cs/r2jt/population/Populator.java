@@ -2087,8 +2087,8 @@ public class Populator extends TreeWalkerVisitor {
                                 segmentName);
 
                 if (curType == null) {
-                    throw new SourceErrorException("Value not a tuple.",
-                            lastGood);
+                    //   throw new SourceErrorException("Value not a tuple.",
+                    //           lastGood);
                 }
             }
             catch (NoSuchElementException nsee) {

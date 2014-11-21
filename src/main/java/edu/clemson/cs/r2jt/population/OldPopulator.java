@@ -861,6 +861,8 @@ public class OldPopulator extends ResolveConceptualVisitor {
         table.createStatementScope();
         visitExp(stmt.getMaintaining());
         visitExp(stmt.getDecreasing());
+        // NY
+        visitExp(stmt.getElapsed_Time());
         visitStatementList(stmt.getStatements());
         table.completeStatementScope();
     }

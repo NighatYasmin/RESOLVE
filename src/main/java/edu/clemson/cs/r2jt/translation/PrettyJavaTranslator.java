@@ -1829,6 +1829,14 @@ public class PrettyJavaTranslator extends ResolveConceptualVisitor {
             appendJava("// maintaining ", true);
             appendJava(maintaining.toString(0), false);
         }
+        //NY
+        Exp elapsedTime = stmt.getElapsed_Time();
+        if (elapsedTime != null) {
+            line = elapsedTime.getLocation().getPos().getLine();
+            bumpLine(line);
+            appendJava("// elapsedTime ", true);
+            appendJava(elapsedTime.toString(0), false);
+        }
         Exp decreasing = stmt.getDecreasing();
         if (decreasing != null) {
             line = decreasing.getLocation().getPos().getLine();
